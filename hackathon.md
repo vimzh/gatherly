@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** none
 - **Started:** 2026-09-21T17:53:21Z
-- **Last updated:** 2026-09-21T19:13:33Z
+- **Last updated:** 2026-09-21T19:24:57Z
 
 ## Log
 
@@ -25,11 +25,12 @@ installed the initial shadcn/ui primitives for its chat and outreach interface
 (`src/app`, `src/components/ui`, `next.config.ts`). Added project guidance to
 keep this build log current (`AGENTS.md`).
 
-### 2026-09-21 - 3d70d9b
+### 2026-09-21 - 852d482
 Added idempotent event creation and safe lookup on local Convex, backed by an
 indexed request key and in-memory contract tests (`convex/schema.ts`,
 `convex/events.ts`). Built the focused Gatherly brief composer and persistent
 `/event?id=<eventId>` workspace with reactive loading, recovery states, visible
 demo research stages, responsive layouts, and an explicit email approval gate
-(`src/app`, `src/components/gatherly`). Live venue research and outreach remain
-unconnected.
+(`src/app`, `src/components/gatherly`). Validation returns keyboard focus to
+the brief, and the unauthenticated form now warns users to enter demo details
+only. Live venue research and outreach remain unconnected.
