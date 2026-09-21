@@ -9,8 +9,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
-  title: "AI Venue Sourcing Workspace",
-  description: "Research venues, prepare outreach, and compare replies in one place.",
+  title: "Gatherly — Venue sourcing workspace",
+  description:
+    "Find credible venues, check the details, and prepare outreach for your approval.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
