@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Manrope } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ConvexClientProvider } from "@/components/convex-client-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={cn("font-sans", manrope.variable)}>
       <body>
-        <TooltipProvider>{children}</TooltipProvider>
+        <ConvexClientProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );
