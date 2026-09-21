@@ -15,6 +15,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 The app uses the Next.js App Router, TypeScript, Tailwind CSS, and shadcn/ui. Product scope and assumptions live in [`docs/idea.md`](docs/idea.md).
 
+## Convex development
+
+Start the local backend and frontend in separate terminals:
+
+```bash
+bunx convex dev
+bun run dev
+```
+
+The Gatherly entry page creates a persistent event and opens it at
+`/event?id=<eventId>`. The current activity sequence is explicitly demo data;
+live venue research and outreach are not connected yet.
+
 ## Verify
 
 ```bash
