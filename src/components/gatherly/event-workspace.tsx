@@ -61,7 +61,7 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
   return (
     <main className="min-h-svh p-3 sm:p-5">
       <div className="mx-auto grid min-h-[calc(100svh-1.5rem)] max-w-[90rem] gap-3 lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)_22rem]">
-        <aside className="flex flex-col rounded-2xl border border-border bg-card p-4 shadow-lg lg:p-5">
+        <aside className="flex flex-col rounded border border-border bg-card p-4 lg:p-5">
           <Link
             href="/"
             className="w-fit text-sm font-semibold tracking-[-0.02em] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -111,7 +111,7 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
         <section
           aria-labelledby="activity-title"
           aria-live="polite"
-          className="rounded-2xl border border-border bg-card p-5 shadow-lg sm:p-7"
+          className="rounded border border-border bg-card p-5 sm:p-7"
         >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
             <div>
@@ -136,7 +136,7 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
               <li key={activity.key} className="grid grid-cols-[2.25rem_1fr] gap-3 py-5">
                 <span
                   className={cn(
-                    "flex size-9 items-center justify-center rounded-xl border",
+                    "flex size-9 items-center justify-center rounded border",
                     activity.state === "completed" &&
                       "border-graphite bg-graphite text-primary-foreground",
                     activity.state === "active" &&
@@ -169,7 +169,7 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
 
         <aside
           aria-labelledby="venues-title"
-          className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-lg"
+          className="flex flex-col rounded border border-border bg-card p-5"
         >
           <div className="flex items-center justify-between border-b border-border pb-4">
             <h2 id="venues-title" className="text-sm font-semibold">
@@ -179,7 +179,7 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
           </div>
 
           <div className="flex flex-1 flex-col items-center justify-center py-14 text-center lg:py-8">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+            <span className="flex size-11 items-center justify-center rounded bg-secondary text-muted-foreground">
               <Search className="size-5" aria-hidden="true" />
             </span>
             <h3 className="mt-4 text-sm font-semibold">No venues yet</h3>
@@ -188,7 +188,7 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-secondary p-3.5">
+          <div className="rounded border border-border bg-secondary p-3.5">
             <p className="flex items-center gap-2 text-xs font-medium">
               <ShieldCheck className="size-4 text-clay" aria-hidden="true" />
               Nothing sends without your approval.

@@ -18,15 +18,15 @@ export function EventRecovery({
 }) {
   return (
     <main className="flex min-h-svh items-center justify-center px-5 py-12">
-      <section className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
-        <span className="mx-auto flex size-11 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+      <section className="w-full max-w-md rounded border border-border bg-card p-8 text-center">
+        <span className="mx-auto flex size-11 items-center justify-center rounded bg-secondary text-muted-foreground">
           <SearchX className="size-5" aria-hidden="true" />
         </span>
         <h1 className="mt-5 text-xl font-semibold tracking-[-0.025em]">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
         <Link
           href="/"
-          className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Start a new search
@@ -40,9 +40,9 @@ export function EventWorkspaceLoading() {
   return (
     <main className="min-h-svh p-3 sm:p-5">
       <div className="mx-auto grid min-h-[calc(100svh-1.5rem)] max-w-[90rem] gap-3 lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)_22rem]">
-        <Skeleton className="min-h-48 rounded-2xl" />
-        <Skeleton className="min-h-96 rounded-2xl" />
-        <Skeleton className="min-h-64 rounded-2xl" />
+        <Skeleton className="min-h-48 rounded" />
+        <Skeleton className="min-h-96 rounded" />
+        <Skeleton className="min-h-64 rounded" />
       </div>
     </main>
   );

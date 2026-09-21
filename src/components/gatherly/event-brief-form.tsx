@@ -70,7 +70,7 @@ export function EventBriefForm() {
     <div className="mt-10 w-full">
       <form
         onSubmit={handleSubmit}
-        className="rounded-3xl border border-border bg-card p-3 text-left shadow-xl sm:p-4"
+        className="rounded border border-border bg-card p-3 text-left sm:p-4"
       >
         <label htmlFor="event-brief" className="sr-only">
           Describe your event and venue requirements
@@ -93,7 +93,7 @@ export function EventBriefForm() {
             type="submit"
             size="lg"
             disabled={pending}
-            className="ml-auto h-10 rounded-xl px-4"
+            className="ml-auto h-10 rounded px-4"
           >
             {pending ? (
               <LoaderCircle className="animate-spin motion-reduce:animate-none" />
@@ -117,7 +117,7 @@ export function EventBriefForm() {
             key={example}
             type="button"
             onClick={() => updateBrief(example)}
-            className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="rounded-sm border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {index === 0 ? "Hackathon" : index === 1 ? "Creative showcase" : "Company gathering"}
           </button>
