@@ -20,6 +20,7 @@ export function EventBriefForm() {
   const [brief, setBrief] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const briefRef = useRef<HTMLTextAreaElement>(null);
   const requestKeyRef = useRef<string | null>(null);
   const submittingRef = useRef(false);
   const createEvent = useMutation(api.events.create);
@@ -39,6 +40,7 @@ export function EventBriefForm() {
       const normalized = normalizeEventBrief(brief);
       if (!normalized) {
         setError("Describe the event before starting a search.");
+        briefRef.current?.focus();
         return;
       }
 
@@ -52,6 +54,7 @@ export function EventBriefForm() {
       });
       router.push(eventHref(eventId));
     } catch (caughtError) {
+      briefRef.current?.focus();
       setError(
         caughtError instanceof Error
           ? caughtError.message
@@ -73,6 +76,7 @@ export function EventBriefForm() {
           Describe your event and venue requirements
         </label>
         <Textarea
+          ref={briefRef}
           id="event-brief"
           value={brief}
           onChange={(event) => updateBrief(event.target.value)}
