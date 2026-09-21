@@ -124,10 +124,13 @@ export function EventBriefForm() {
         ))}
       </div>
 
-      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <ShieldCheck className="size-3.5 text-clay" aria-hidden="true" />
-        You approve every email before it sends.
-      </p>
+      <div className="mt-6 space-y-1.5 text-xs text-muted-foreground">
+        <p className="flex items-center justify-center gap-2">
+          <ShieldCheck className="size-3.5 text-clay" aria-hidden="true" />
+          You approve every email before it sends.
+        </p>
+        <p>Demo mode — use example event details only.</p>
+      </div>
     </div>
   );
 }

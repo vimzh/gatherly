@@ -37,4 +37,10 @@ describe("event brief form", () => {
     expect(document.activeElement).toBe(composer);
     expect(mocks.createEvent).not.toHaveBeenCalled();
   });
+
+  it("warns that unauthenticated event briefs are demo data", () => {
+    render(<EventBriefForm />);
+
+    expect(screen.getByText("Demo mode — use example event details only.")).toBeTruthy();
+  });
 });
