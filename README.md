@@ -36,4 +36,4 @@ bun run lint
 bun run build
 ```
 
-The production build is a static export in `dist/` for deployment through Convex Static Hosting at a `convex.site` URL.
+The production build is a static export in `out/` for deployment through Convex hosting at a `convex.app` URL.
