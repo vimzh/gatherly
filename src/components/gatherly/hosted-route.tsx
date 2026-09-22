@@ -2,6 +2,7 @@
 "use client";
 
 import { Suspense, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import { parseHostedEventPath } from "@/lib/event-navigation";
 import { EventInboxPageClient } from "./event-inbox-page-client";
 import { EventPageClient, EventWorkspaceLoading } from "./event-page-client";
@@ -9,13 +10,14 @@ import { EventPageClient, EventWorkspaceLoading } from "./event-page-client";
 const subscribe = () => () => undefined;
 
 export function HostedRoute({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const location = useSyncExternalStore(
     subscribe,
     () => `${window.location.pathname}${window.location.search}`,
     () => "/",
   );
   const url = new URL(location, "https://gatherly.local");
-  const route = parseHostedEventPath(url.pathname);
+  const route = parseHostedEventPath(pathname ?? url.pathname);
 
   if (!route) return children;
 

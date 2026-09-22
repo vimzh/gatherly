@@ -4,7 +4,7 @@
 import { useMutation } from "convex/react";
 import { ArrowUpRight, BrainCircuit, Flame, KeyRound, LoaderCircle, Mail, Paperclip } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,8 +85,28 @@ export function EventBriefForm() {
   function updateBrief(value: string) {
     if (submittingRef.current) return;
     setBrief(value);
+    setBriefFileName(null);
     setError(null);
     requestKeyRef.current = null;
+  }
+
+  async function readBriefFile(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      if (!/\.(txt|md)$/i.test(file.name) || file.size > 16_000) {
+        throw new Error("Choose a .txt or .md brief under 16 KB.");
+      }
+      const content = normalizeEventBrief(await file.text());
+      if (!content) throw new Error("The selected brief is empty.");
+      updateBrief(content);
+      setBriefFileName(file.name);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not read the brief file.");
+    } finally {
+      input.value = "";
+    }
   }
 
   function updateCredential(key: keyof ProviderCredentials, value: string) {
@@ -285,20 +305,21 @@ export function EventBriefForm() {
           size="sm"
           variant="outline"
           disabled={pending}
-          aria-label={briefFileName ? `Replace brief file: ${briefFileName}` : "Upload brief file"}
+          aria-label={briefFileName ? `Replace brief file: ${briefFileName}` : "Upload text brief"}
           className="h-8 max-w-full rounded"
           onClick={() => briefFileRef.current?.click()}
         >
           <Paperclip aria-hidden="true" />
-          <span className="max-w-56 truncate">{briefFileName ?? "Upload brief file"}</span>
+          <span className="max-w-56 truncate">{briefFileName ?? "Upload text brief"}</span>
         </Button>
         <input
           ref={briefFileRef}
           type="file"
+          accept=".txt,.md,text/plain,text/markdown"
           disabled={pending}
           className="sr-only"
           aria-label="Choose brief file"
-          onChange={(event) => setBriefFileName(event.target.files?.[0]?.name ?? null)}
+          onChange={readBriefFile}
         />
       </div>
 

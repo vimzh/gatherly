@@ -5,17 +5,105 @@ import { useAction, useQuery } from "convex/react";
 import { ArrowLeft, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   parseProviderCredentials,
   providerCredentialsSnapshot,
+  saveProviderCredentials,
+  type ProviderCredentials,
 } from "@/lib/provider-credentials";
 import { EventWorkspace } from "./event-workspace";
 import { DemoResearchReplay } from "./research-progress";
 
 const subscribeToSession = () => () => undefined;
+
+function RetryResearch({
+  eventId,
+  sendToken,
+  credentials,
+}: {
+  eventId: Id<"events">;
+  sendToken: string;
+  credentials: ProviderCredentials;
+}) {
+  const retry = useAction(api.research.generateForEvent);
+  const [openaiApiKey, setOpenaiApiKey] = useState(credentials.openaiApiKey);
+  const [firecrawlApiKey, setFirecrawlApiKey] = useState(credentials.firecrawlApiKey);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+    const openaiKey = openaiApiKey.trim();
+    const firecrawlKey = firecrawlApiKey.trim();
+    if (!openaiKey || !firecrawlKey) {
+      setError("Add both research keys before retrying.");
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      saveProviderCredentials(eventId, {
+        ...credentials,
+        openaiApiKey: openaiKey,
+        firecrawlApiKey: firecrawlKey,
+      });
+      await retry({
+        eventId,
+        sendToken,
+        openaiApiKey: openaiKey,
+        firecrawlApiKey: firecrawlKey,
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Research could not restart.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-6 flex max-w-xl flex-wrap items-end gap-3">
+      <label className="min-w-52 flex-1 text-xs font-medium">
+        OpenAI API key
+        <input
+          type="password"
+          required
+          maxLength={512}
+          autoComplete="off"
+          value={openaiApiKey}
+          onChange={(event) => setOpenaiApiKey(event.target.value)}
+          className="mt-1 block h-10 w-full rounded border border-input bg-background px-3"
+        />
+      </label>
+      <label className="min-w-52 flex-1 text-xs font-medium">
+        Firecrawl API key
+        <input
+          type="password"
+          required
+          maxLength={512}
+          autoComplete="off"
+          value={firecrawlApiKey}
+          onChange={(event) => setFirecrawlApiKey(event.target.value)}
+          className="mt-1 block h-10 w-full rounded border border-input bg-background px-3"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={pending}
+        className="h-10 rounded bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+      >
+        {pending ? "Retrying" : "Retry research"}
+      </button>
+      {error ? (
+        <p role="alert" className="w-full text-xs text-destructive">{error}</p>
+      ) : null}
+    </form>
+  );
+}
 
 export function EventRecovery({
   title,
@@ -179,6 +267,11 @@ export function EventPageClient({
       research={research}
       sendToken={sendToken}
       providerCredentials={credentials}
+      retryControls={
+        event.researchStage === "failed" && !event.isDemo && sendToken && credentials
+          ? <RetryResearch eventId={event._id} sendToken={sendToken} credentials={credentials} />
+          : undefined
+      }
     />
   );
 }

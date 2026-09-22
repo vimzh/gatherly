@@ -278,14 +278,16 @@ export function EventWorkspace({
   research,
   sendToken,
   providerCredentials,
+  retryControls,
 }: {
   event: Omit<Doc<"events">, "requestKey" | "sendToken">;
   research: ResearchResult;
   sendToken: string | null;
   providerCredentials: ProviderCredentials | null;
+  retryControls?: React.ReactNode;
 }) {
   if (event.researchStage !== "review_ready") {
-    return <ResearchProgress event={event} />;
+    return <ResearchProgress event={event} retryControls={retryControls} />;
   }
 
   const venues = research?.venues ?? [];

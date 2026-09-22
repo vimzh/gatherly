@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Exercises bookmark restoration and reactive research states without live providers.
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EventPageClient } from "./event-page-client";
 
@@ -102,5 +102,42 @@ describe("event URL restoration", () => {
       openaiApiKey: "sk-visitor",
       firecrawlApiKey: "fc-visitor",
     }));
+  });
+
+  it("retries failed research with corrected keys on the same event", async () => {
+    sessionStorage.setItem("gatherly:provider-credentials:event-id", JSON.stringify({
+      openaiApiKey: "invalid-openai",
+      firecrawlApiKey: "firecrawl-key",
+      agentMailApiKey: "agentmail-key",
+      agentMailInboxId: "organizer@agentmail.test",
+    }));
+    mocks.query.mockReturnValue({
+      _id: "event-id",
+      _creationTime: 1,
+      title: "Live event",
+      brief: "A meetup in London",
+      status: "failed",
+      isDemo: false,
+      researchStage: "failed",
+      agentStage: "planning",
+      researchError: "Invalid OpenAI key",
+      activities: [],
+    });
+    mocks.generateResearch.mockResolvedValue(null);
+
+    render(<EventPageClient eventId="event-id" sendToken="send-token" />);
+    fireEvent.change(screen.getByLabelText("OpenAI API key"), {
+      target: { value: "corrected-openai" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Retry research" }));
+
+    await waitFor(() => expect(mocks.generateResearch).toHaveBeenCalledWith({
+      eventId: "event-id",
+      sendToken: "send-token",
+      openaiApiKey: "corrected-openai",
+      firecrawlApiKey: "firecrawl-key",
+    }));
+    expect(JSON.parse(sessionStorage.getItem("gatherly:provider-credentials:event-id")!).openaiApiKey)
+      .toBe("corrected-openai");
   });
 });

@@ -114,22 +114,37 @@ describe("event brief form", () => {
     expect(screen.getByText("Stage · Late-evening access")).toBeTruthy();
   });
 
-  it("shows any selected brief file without submitting it", () => {
+  it("loads an uploaded text brief into the composer", async () => {
     render(<EventBriefForm />);
     const input = screen.getByLabelText("Choose brief file") as HTMLInputElement;
     const file = new File(["# Brief"], "developer-meetup.md", {
       type: "text/markdown",
     });
+    Object.defineProperty(file, "text", { value: async () => "# Brief" });
 
-    expect(input.accept).toBe("");
+    expect(input.accept).toContain(".md");
     const click = vi.spyOn(input, "click");
-    fireEvent.click(screen.getByRole("button", { name: "Upload brief file" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload text brief" }));
     expect(click).toHaveBeenCalledOnce();
     fireEvent.change(input, { target: { files: [file] } });
 
+    await act(async () => {});
+
     expect(screen.getByRole("button", { name: "Replace brief file: developer-meetup.md" })).toBeTruthy();
     expect(screen.getByText("developer-meetup.md")).toBeTruthy();
+    expect((screen.getByRole("textbox", { name: "Describe your event and venue requirements" }) as HTMLTextAreaElement).value).toBe("# Brief");
     expect(mocks.createEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-text upload without replacing the brief", async () => {
+    render(<EventBriefForm />);
+    const input = screen.getByLabelText("Choose brief file") as HTMLInputElement;
+    const file = new File(["binary"], "brief.pdf", { type: "application/pdf" });
+    fireEvent.change(input, { target: { files: [file] } });
+    await act(async () => {});
+
+    expect(screen.getByRole("alert").textContent).toContain(".txt or .md");
+    expect((screen.getByRole("textbox", { name: "Describe your event and venue requirements" }) as HTMLTextAreaElement).value).toBe("");
   });
 
   it("opens key configuration when a live search has no credentials", () => {

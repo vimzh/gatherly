@@ -15,7 +15,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -141,9 +141,11 @@ function readableResearchError(value: string | undefined) {
 export function ResearchProgress({
   event,
   demoSecondsRemaining,
+  retryControls,
 }: {
   event: Event;
   demoSecondsRemaining?: number;
+  retryControls?: ReactNode;
 }) {
   const currentIndex = Math.max(
     0,
@@ -209,6 +211,7 @@ export function ResearchProgress({
                     ? "Six focused agents hand the work forward. This page updates as each one finishes."
                     : "Each agent gets five seconds before handing the event to the next specialist."}
               </p>
+              {failed ? retryControls : null}
             </div>
 
             <div className="border-l-2 border-foreground pl-5">
