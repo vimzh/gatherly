@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** gpt-5.4-mini-2026-03-17
 - **Started:** 2026-09-21T17:53:21Z
-- **Last updated:** 2026-09-22T11:16:27Z
+- **Last updated:** 2026-09-22T11:28:49Z
 
 ## Log
 
@@ -98,3 +98,16 @@ backend and static site were redeployed, and both live routes return HTTP 200.
 No outreach was sent. A final provider-backed rerun could not start because the
 Firecrawl account returned `402 Insufficient credits`; earlier London runs in
 this iteration completed the full pipeline with all 14 checks passing.
+
+### 2026-09-22 - edf2973
+Replaced the research-phase workspace with a focused full-page live progress
+view after “Find venues.” It names the Planner, Scout, Evidence agent,
+Researcher, Critic, and Verifier; marks each handoff as done, working, waiting,
+or stopped; highlights the exact current step; and keeps the detailed action
+ledger and event brief visible (`src/components/gatherly/research-progress.tsx`).
+The view uses the existing realtime Convex event state, adds no provider calls
+or backend state, and automatically switches to the venue-results workspace
+when review completes. Provider failures now show an actionable message without
+an internal stack trace. Thirty-eight tests, lint, type checking, the production
+build, and a local visual browser check pass. The production site was
+republished and both live routes return HTTP 200. No outreach was sent.
