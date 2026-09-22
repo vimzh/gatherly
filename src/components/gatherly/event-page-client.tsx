@@ -1,13 +1,21 @@
 // Resolves the event URL and renders either recovery, loading, or workspace UI.
 "use client";
 
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { ArrowLeft, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  parseProviderCredentials,
+  providerCredentialsSnapshot,
+} from "@/lib/provider-credentials";
 import { EventWorkspace } from "./event-workspace";
+import { DemoResearchReplay } from "./research-progress";
+
+const subscribeToSession = () => () => undefined;
 
 export function EventRecovery({
   title,
@@ -60,15 +68,68 @@ export function EventWorkspaceLoading() {
   );
 }
 
-export function EventPageClient() {
+export function EventPageClient({
+  eventId: routeEventId,
+  sendToken: routeSendToken,
+  replayDemo: routeReplayDemo,
+}: {
+  eventId?: string | null;
+  sendToken?: string | null;
+  replayDemo?: boolean;
+} = {}) {
   const searchParams = useSearchParams();
-  const eventId = searchParams.get("id")?.trim() || null;
-  const sendToken = searchParams.get("token")?.trim() || null;
+  const eventId = routeEventId ?? (searchParams.get("id")?.trim() || null);
+  const sendToken = routeSendToken ?? (searchParams.get("token")?.trim() || null);
+  const replayDemo = routeReplayDemo ?? searchParams.get("demo") === "agents";
   const event = useQuery(api.events.get, eventId ? { eventId } : "skip");
   const research = useQuery(
     api.researchData.getByEvent,
     event ? { eventId: event._id } : "skip",
   );
+  const generateResearch = useAction(api.research.generateForEvent);
+  const startedEventRef = useRef<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [demoReplayComplete, setDemoReplayComplete] = useState(false);
+  const finishDemoReplay = useCallback(() => setDemoReplayComplete(true), []);
+  const credentialSnapshot = useSyncExternalStore(
+    subscribeToSession,
+    () => (eventId ? providerCredentialsSnapshot(eventId) : ""),
+    () => null,
+  );
+  const credentials = useMemo(
+    () => credentialSnapshot ? parseProviderCredentials(credentialSnapshot) : null,
+    [credentialSnapshot],
+  );
+  const credentialsLoaded = credentialSnapshot !== null;
+
+  useEffect(() => {
+    if (
+      !eventId ||
+      !event ||
+      event.isDemo ||
+      event.researchStage !== "queued" ||
+      !sendToken ||
+      !credentials ||
+      startedEventRef.current === eventId
+    ) {
+      return;
+    }
+    startedEventRef.current = eventId;
+    setStartError(null);
+    void generateResearch({
+      eventId: event._id,
+      sendToken,
+      openaiApiKey: credentials.openaiApiKey,
+      firecrawlApiKey: credentials.firecrawlApiKey,
+    }).catch((caught) => {
+      startedEventRef.current = null;
+      setStartError(
+        caught instanceof Error
+          ? caught.message
+          : "Gatherly could not start this venue search.",
+      );
+    });
+  }, [credentials, event, eventId, generateResearch, sendToken]);
 
   if (!eventId) {
     return (
@@ -87,9 +148,37 @@ export function EventPageClient() {
       />
     );
   }
+  if (event.isDemo && replayDemo && !demoReplayComplete) {
+    return <DemoResearchReplay event={event} onComplete={finishDemoReplay} />;
+  }
+  if (!event.isDemo && event.researchStage === "queued" && !credentialsLoaded) {
+    return <EventWorkspaceLoading />;
+  }
+  if (
+    !event.isDemo &&
+    event.researchStage === "queued" &&
+    (!credentials || !sendToken || startError)
+  ) {
+    return (
+      <EventRecovery
+        title="This live search cannot start"
+        description={
+          startError ??
+          "Its browser-session credentials are missing. Return home and start a new live search with your provider access."
+        }
+      />
+    );
+  }
   if (event.researchStage === "review_ready" && research === undefined) {
     return <EventWorkspaceLoading />;
   }
 
-  return <EventWorkspace event={event} research={research} sendToken={sendToken} />;
+  return (
+    <EventWorkspace
+      event={event}
+      research={research}
+      sendToken={sendToken}
+      providerCredentials={credentials}
+    />
+  );
 }

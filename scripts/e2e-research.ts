@@ -113,6 +113,10 @@ const scenarios = [
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 if (!convexUrl) throw new Error("NEXT_PUBLIC_CONVEX_URL is missing.");
+const openaiApiKey = process.env.OPENAI_API_KEY;
+if (!openaiApiKey) throw new Error("OPENAI_API_KEY is missing.");
+const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+if (!firecrawlApiKey) throw new Error("FIRECRAWL_API_KEY is missing.");
 const scenarioStart = Number.parseInt(process.env.E2E_SCENARIO_START ?? "1", 10);
 const scenarioLimit = Number.parseInt(process.env.E2E_SCENARIO_LIMIT ?? "5", 10);
 if (!Number.isInteger(scenarioStart) || scenarioStart < 1 || scenarioStart > scenarios.length) {
@@ -151,6 +155,12 @@ for (const [index, scenario] of selectedScenarios.entries()) {
   const created = await client.mutation(api.events.create, {
     brief: scenario.brief,
     requestKey: `e2e-${runId}-${scenarioNumber}`,
+  });
+  await client.action(api.research.generateForEvent, {
+    eventId: created.eventId,
+    sendToken: created.sendToken,
+    openaiApiKey,
+    firecrawlApiKey,
   });
   const deadline = Date.now() + 8 * 60_000;
   let terminal = false;

@@ -1,5 +1,6 @@
 // Persists reviewed venue research and exposes the client read contract.
 import { ConvexError, v } from "convex/values";
+import { internal } from "./_generated/api";
 import {
   internalMutation,
   query,
@@ -22,6 +23,8 @@ type AgentStage =
   | "synthesizing"
   | "critiquing"
   | "verifying";
+
+export const RESEARCH_WATCHDOG_MS = 9 * 60_000;
 
 const agentStageOrder: AgentStage[] = [
   "planning",
@@ -149,33 +152,48 @@ const completedActivities = runningActivities.map((activity, index) => ({
 }));
 
 export const begin = internalMutation({
-  args: { eventId: v.id("events") },
-  returns: v.union(v.object({ brief: v.string() }), v.null()),
-  handler: async (ctx, { eventId }) => {
+  args: {
+    eventId: v.id("events"),
+    sendToken: v.optional(v.string()),
+  },
+  returns: v.union(v.object({ brief: v.string(), attemptId: v.string() }), v.null()),
+  handler: async (ctx, { eventId, sendToken }) => {
     const event = await ctx.db.get(eventId);
+    if (sendToken !== undefined && (!event?.sendToken || event.sendToken !== sendToken)) {
+      throw new ConvexError("This event link is not authorized to start research.");
+    }
     if (!event || event.researchStage === "running" || event.status === "review_ready") {
       return null;
     }
 
+    const attemptId = crypto.randomUUID();
     await ctx.db.patch(eventId, {
       status: "researching",
       researchStage: "running",
+      researchAttemptId: attemptId,
       agentStage: "planning",
       agentTrace: ["planning"],
       researchError: undefined,
       researchQuery: undefined,
+      aiReview: undefined,
       activities: activitiesForStage("planning"),
     });
-    return { brief: event.brief };
+    // A separate durable mutation survives termination of the action's worker.
+    await ctx.scheduler.runAfter(RESEARCH_WATCHDOG_MS, internal.researchData.fail, {
+      eventId,
+      attemptId,
+      message: "Venue research stopped before completion. Please try again.",
+    });
+    return { brief: event.brief, attemptId };
   },
 });
 
 export const setAgentStage = internalMutation({
-  args: { eventId: v.id("events"), stage: agentStage },
+  args: { eventId: v.id("events"), attemptId: v.string(), stage: agentStage },
   returns: v.null(),
-  handler: async (ctx, { eventId, stage }) => {
+  handler: async (ctx, { eventId, attemptId, stage }) => {
     const event = await ctx.db.get(eventId);
-    if (!event || event.researchStage !== "running") return null;
+    if (!event || event.researchStage !== "running" || event.researchAttemptId !== attemptId) return null;
     if (event.agentStage === stage) return null;
     const currentIndex = event.agentStage
       ? agentStageOrder.indexOf(event.agentStage)
@@ -193,10 +211,11 @@ export const setAgentStage = internalMutation({
 });
 
 export const recordSearchQuery = internalMutation({
-  args: { eventId: v.id("events"), researchQuery: v.string() },
+  args: { eventId: v.id("events"), attemptId: v.string(), researchQuery: v.string() },
   returns: v.null(),
-  handler: async (ctx, { eventId, researchQuery }) => {
-    if (!(await ctx.db.get(eventId))) throw new ConvexError("Event not found.");
+  handler: async (ctx, { eventId, attemptId, researchQuery }) => {
+    const event = await ctx.db.get(eventId);
+    if (!event || event.researchStage !== "running" || event.researchAttemptId !== attemptId) return null;
     await ctx.db.patch(eventId, { researchQuery });
     return null;
   },
@@ -205,6 +224,7 @@ export const recordSearchQuery = internalMutation({
 export const complete = internalMutation({
   args: {
     eventId: v.id("events"),
+    attemptId: v.string(),
     model: v.string(),
     plan: researchPlan,
     rejectedCandidates: v.array(rejectedCandidate),
@@ -215,7 +235,7 @@ export const complete = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
-    if (!event) throw new ConvexError("Event not found.");
+    if (!event || event.researchStage !== "running" || event.researchAttemptId !== args.attemptId) return null;
 
     const existingVenue = await ctx.db
       .query("venues")
@@ -284,7 +304,8 @@ export const complete = internalMutation({
 export const fail = internalMutation({
   args: {
     eventId: v.id("events"),
-    model: v.string(),
+    attemptId: v.string(),
+    model: v.optional(v.string()),
     message: v.string(),
     reviewSummary: v.optional(v.string()),
     issues: v.optional(v.array(criticismIssue)),
@@ -293,7 +314,7 @@ export const fail = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
-    if (!event) return null;
+    if (!event || event.researchStage !== "running" || event.researchAttemptId !== args.attemptId) return null;
 
     await ctx.db.patch(args.eventId, {
       status: "failed",
@@ -309,7 +330,7 @@ export const fail = internalMutation({
           : activity,
       ),
       aiReview:
-        args.reviewSummary && args.issues && args.verification
+        args.model && args.reviewSummary && args.issues && args.verification
           ? {
               model: args.model,
               summary: args.reviewSummary,

@@ -5,20 +5,16 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 
-function agentMailConfig() {
-  const apiKey = process.env.AGENTMAIL_API_KEY;
-  const inboxId = process.env.AGENTMAIL_INBOX_ID;
-  if (!apiKey) {
-    throw new Error(
-      "AGENTMAIL_API_KEY is missing from the Convex environment. Set it with `bunx convex env set AGENTMAIL_API_KEY`.",
-    );
+function agentMailConfig(apiKey: string, inboxId: string) {
+  const normalizedApiKey = apiKey.trim();
+  const normalizedInboxId = inboxId.trim();
+  if (!normalizedApiKey || normalizedApiKey.length > 512) {
+    throw new Error("AgentMail API key must be between 1 and 512 characters.");
   }
-  if (!inboxId) {
-    throw new Error(
-      "AGENTMAIL_INBOX_ID is missing from the Convex environment. Set it to an inbox owned by the configured AgentMail account.",
-    );
+  if (!normalizedInboxId || normalizedInboxId.length > 320) {
+    throw new Error("AgentMail inbox ID must be between 1 and 320 characters.");
   }
-  return { apiKey, inboxId };
+  return { apiKey: normalizedApiKey, inboxId: normalizedInboxId };
 }
 
 type PreparedSend = {
@@ -67,8 +63,10 @@ async function sendWithAgentMail(
     typeof result !== "object" ||
     !("message_id" in result) ||
     typeof result.message_id !== "string" ||
+    !result.message_id.trim() ||
     !("thread_id" in result) ||
-    typeof result.thread_id !== "string"
+    typeof result.thread_id !== "string" ||
+    !result.thread_id.trim()
   ) {
     throw new Error("AgentMail returned an invalid send response.");
   }
@@ -80,6 +78,10 @@ export const sendDraft = action({
     eventId: v.id("events"),
     draftId: v.id("outreachDrafts"),
     sendToken: v.string(),
+    agentMailApiKey: v.string(),
+    agentMailInboxId: v.string(),
+    subject: v.optional(v.string()),
+    body: v.optional(v.string()),
   },
   returns: v.object({
     status: v.literal("sent"),
@@ -87,10 +89,19 @@ export const sendDraft = action({
     threadId: v.string(),
   }),
   handler: async (ctx, args): Promise<SentDraft> => {
-    const { apiKey, inboxId } = agentMailConfig();
+    const { apiKey, inboxId } = agentMailConfig(
+      args.agentMailApiKey,
+      args.agentMailInboxId,
+    );
     const prepared: PreparedSend = await ctx.runMutation(
       internal.outreachData.prepareSend,
-      args,
+      {
+        eventId: args.eventId,
+        draftId: args.draftId,
+        sendToken: args.sendToken,
+        subject: args.subject,
+        body: args.body,
+      },
     );
     if (prepared.agentMailMessageId && prepared.agentMailThreadId) {
       return {

@@ -4,12 +4,16 @@ import { internalMutation } from "./_generated/server";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const IDEMPOTENCY_WINDOW_MS = 24 * 60 * 60 * 1_000;
+const MAX_SUBJECT_LENGTH = 200;
+const MAX_BODY_LENGTH = 20_000;
 
 export const prepareSend = internalMutation({
   args: {
     eventId: v.id("events"),
     draftId: v.id("outreachDrafts"),
     sendToken: v.string(),
+    subject: v.optional(v.string()),
+    body: v.optional(v.string()),
   },
   returns: v.object({
     recipient: v.string(),
@@ -19,13 +23,16 @@ export const prepareSend = internalMutation({
     agentMailMessageId: v.optional(v.string()),
     agentMailThreadId: v.optional(v.string()),
   }),
-  handler: async (ctx, { eventId, draftId, sendToken }) => {
+  handler: async (ctx, { eventId, draftId, sendToken, subject, body }) => {
     const [event, draft] = await Promise.all([
       ctx.db.get(eventId),
       ctx.db.get(draftId),
     ]);
     if (!event || !event.sendToken || event.sendToken !== sendToken) {
       throw new ConvexError("This event link is not authorized to send outreach.");
+    }
+    if (event.isDemo) {
+      throw new ConvexError("Demo events are read-only and cannot send outreach.");
     }
     if (!draft || draft.eventId !== eventId) {
       throw new ConvexError("Outreach draft not found for this event.");
@@ -64,7 +71,28 @@ export const prepareSend = internalMutation({
       );
     }
 
+    if (draft.sendAttemptedAt && (subject !== undefined || body !== undefined)) {
+      throw new ConvexError(
+        "An outreach draft cannot be edited after a send attempt. Retry the original message instead.",
+      );
+    }
+
+    const outgoingSubject = (subject ?? draft.subject).trim();
+    const outgoingBody = (body ?? draft.body).trim();
+    if (!outgoingSubject || outgoingSubject.length > MAX_SUBJECT_LENGTH) {
+      throw new ConvexError(
+        `The outreach subject must be between 1 and ${MAX_SUBJECT_LENGTH} characters.`,
+      );
+    }
+    if (!outgoingBody || outgoingBody.length > MAX_BODY_LENGTH) {
+      throw new ConvexError(
+        `The outreach message must be between 1 and ${MAX_BODY_LENGTH} characters.`,
+      );
+    }
+
     await ctx.db.patch(draftId, {
+      subject: outgoingSubject,
+      body: outgoingBody,
       status: "sending",
       approvedAt: draft.approvedAt ?? now,
       sendAttemptedAt: draft.sendAttemptedAt ?? now,
@@ -72,8 +100,8 @@ export const prepareSend = internalMutation({
     });
     return {
       recipient: venue.contactValue,
-      subject: draft.subject,
-      body: draft.body,
+      subject: outgoingSubject,
+      body: outgoingBody,
       idempotencyKey,
     };
   },

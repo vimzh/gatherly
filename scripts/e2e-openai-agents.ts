@@ -123,9 +123,14 @@ const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) throw new Error("OPENAI_API_KEY is missing.");
 const client = new OpenAI({ apiKey, maxRetries: 1, timeout: 120_000 });
 const results: string[] = [];
+const scenarioName = process.argv[2];
+const selectedScenarios = scenarioName
+  ? scenarios.filter(([label]) => label === scenarioName)
+  : scenarios;
+if (selectedScenarios.length === 0) throw new Error(`Unknown scenario: ${scenarioName}`);
 
-for (const [index, [label, location, attendeeCount, brief]] of scenarios.entries()) {
-  console.log(`\n[${index + 1}/${scenarios.length}] ${label}`);
+for (const [index, [label, location, attendeeCount, brief]] of selectedScenarios.entries()) {
+  console.log(`\n[${index + 1}/${selectedScenarios.length}] ${label}`);
   try {
     const searchPlan = await planVenueSearch(client, brief);
     if (searchPlan.location.toLowerCase() !== location.toLowerCase()) {

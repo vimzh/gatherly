@@ -4,30 +4,28 @@
 import { useAction } from "convex/react";
 import {
   Building2,
-  Check,
-  Circle,
-  Clock3,
-  LoaderCircle,
+  Inbox,
   Mail,
-  MailCheck,
-  MessageSquareText,
   ExternalLink,
   MapPin,
   Search,
   ShieldCheck,
   Star,
-  TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { eventInboxHref } from "@/lib/event-navigation";
+import type { ProviderCredentials } from "@/lib/provider-credentials";
 import { cn } from "@/lib/utils";
+import { CopyEventId } from "./copy-event-id";
 import { ResearchProgress } from "./research-progress";
 
-type Activity = Doc<"events">["activities"][number];
 type ResearchResult =
   | {
       venues: Doc<"venues">[];
@@ -38,84 +36,76 @@ type ResearchResult =
   | undefined;
 
 const workspaceLinks = [
-  { label: "Activity", icon: Clock3, active: true },
-  { label: "Venues", icon: Building2, active: false },
-  { label: "Outreach", icon: Mail, active: false },
-  { label: "Replies", icon: MessageSquareText, active: false },
+  { label: "Venues", icon: Building2, target: "venues-title" },
+  { label: "Outreach", icon: Mail, target: "outreach" },
 ];
 
-const stateLabels: Record<Activity["state"], string> = {
-  queued: "Queued",
-  active: "In progress",
-  completed: "Complete",
-  failed: "Needs attention",
-  approval_required: "Approval required",
-};
-
-function ActivityIcon({ state }: { state: Activity["state"] }) {
-  if (state === "completed") return <Check className="size-4" aria-hidden="true" />;
-  if (state === "active") {
-    return (
-      <LoaderCircle
-        className="size-4 animate-spin motion-reduce:animate-none"
-        aria-hidden="true"
-      />
-    );
-  }
-  if (state === "failed") {
-    return <TriangleAlert className="size-4" aria-hidden="true" />;
-  }
-  if (state === "approval_required") {
-    return <MailCheck className="size-4" aria-hidden="true" />;
-  }
-  return <Circle className="size-4" aria-hidden="true" />;
-}
-
-function DraftSendButton({
+function OutreachComposer({
   eventId,
   draft,
   venueName,
   recipient,
   sendToken,
+  providerCredentials,
+  isDemo,
 }: {
   eventId: Id<"events">;
   draft: Doc<"outreachDrafts">;
   venueName: string;
   recipient: string | null;
   sendToken: string | null;
+  providerCredentials: ProviderCredentials | null;
+  isDemo: boolean;
 }) {
   const sendDraft = useAction(api.outreach.sendDraft);
   const [pending, setPending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [subject, setSubject] = useState(draft.subject);
+  const [body, setBody] = useState(draft.body);
   const [error, setError] = useState<string | null>(null);
+  const sendingRef = useRef(false);
+  const previewId = `outreach-preview-${draft._id}`;
+  const editingLocked = Boolean(draft.sendAttemptedAt);
 
-  if (draft.status === "sent") {
+  if (sent || draft.status === "sent") {
     return <span className="text-xs font-medium">Sent via AgentMail</span>;
   }
-  if (!recipient) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        A public email address is required for AgentMail.
-      </span>
-    );
-  }
-  if (!sendToken) {
-    return (
-      <span className="text-xs text-destructive">
-        Open the original private event link to send.
-      </span>
-    );
-  }
-  const authorizedToken = sendToken;
 
   async function send() {
+    if (
+      sendingRef.current ||
+      sent ||
+      !recipient ||
+      !sendToken ||
+      !providerCredentials
+    ) {
+      return;
+    }
+    const editedSubject = subject.trim();
+    const editedBody = body.trim();
+    if (!editedSubject || !editedBody) {
+      setError("Subject and message are required before sending.");
+      return;
+    }
     if (!window.confirm(`Send this email to ${recipient} for ${venueName}?`)) return;
+    sendingRef.current = true;
     setPending(true);
     setError(null);
     try {
-      await sendDraft({ eventId, draftId: draft._id, sendToken: authorizedToken });
+      await sendDraft({
+        eventId,
+        draftId: draft._id,
+        sendToken,
+        agentMailApiKey: providerCredentials.agentMailApiKey,
+        agentMailInboxId: providerCredentials.agentMailInboxId,
+        ...(editingLocked ? {} : { subject: editedSubject, body: editedBody }),
+      });
+      setSent(true);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "AgentMail could not send this draft.");
     } finally {
+      sendingRef.current = false;
       setPending(false);
     }
   }
@@ -125,19 +115,95 @@ function DraftSendButton({
       <Button
         type="button"
         size="sm"
-        disabled={pending || draft.status === "sending"}
-        onClick={send}
+        variant="outline"
+        className="border-[#b8cdaa] bg-[#e3eee0] text-[#315b39] hover:bg-[#d8e7d4]"
+        aria-controls={previewId}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
       >
-        {pending || draft.status === "sending"
-          ? "Sending"
-          : draft.status === "failed"
-            ? "Retry with AgentMail"
-            : "Send with AgentMail"}
+        {expanded ? "Hide outreach" : "Review outreach"}
       </Button>
-      {error ? (
-        <p role="alert" className="mt-2 text-xs text-destructive">
-          {error}
-        </p>
+      {expanded ? (
+        <div
+          id={previewId}
+          className="mt-3 rounded border border-[#cbdde2] bg-[#f7fafb] p-3"
+        >
+          <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
+            <div className="min-w-0 text-xs">
+              <p className="font-medium">Email preview</p>
+              <p className="mt-1 truncate text-muted-foreground">
+                To: {recipient ?? "No public email found"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending || !recipient || !sendToken || !providerCredentials}
+              onClick={send}
+            >
+              {pending
+                ? "Sending email"
+                : draft.status === "sending" || draft.status === "failed"
+                  ? "Retry send"
+                  : "Send email"}
+            </Button>
+          </div>
+          {!recipient || !sendToken || !providerCredentials ? (
+            <p className="mt-2 text-xs text-destructive">
+              {!recipient
+                ? "A public email address is required for AgentMail."
+                : isDemo
+                  ? "This event is read-only. Start a live search with your own keys to send."
+                  : !sendToken
+                    ? "This read-only link cannot send outreach."
+                    : "AgentMail credentials are missing from this browser session."}
+            </p>
+          ) : null}
+          <label
+            htmlFor={`${previewId}-subject`}
+            className="mt-3 block text-xs font-medium"
+          >
+            Subject
+          </label>
+          <Input
+            id={`${previewId}-subject`}
+            className="mt-1 bg-white"
+            value={subject}
+            maxLength={200}
+            disabled={editingLocked}
+            onChange={(event) => setSubject(event.target.value)}
+          />
+          <label
+            htmlFor={`${previewId}-body`}
+            className="mt-3 block text-xs font-medium"
+          >
+            Message
+          </label>
+          <Textarea
+            id={`${previewId}-body`}
+            className="mt-1 h-56 min-h-48 field-sizing-fixed resize-y bg-white"
+            value={body}
+            maxLength={20_000}
+            disabled={editingLocked}
+            onChange={(event) => setBody(event.target.value)}
+          />
+          {editingLocked ? (
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              Editing is locked after a send attempt so a retry uses the same message.
+            </p>
+          ) : null}
+          {!pending && draft.status === "sending" ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              The previous send is unconfirmed. Retry this draft to reuse its original
+              send key; attempts older than 24 hours need manual review.
+            </p>
+          ) : null}
+          {error || (!pending && draft.status === "failed" && draft.sendError) ? (
+            <p role="alert" className="mt-2 text-xs text-destructive">
+              {error ?? draft.sendError}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -171,7 +237,10 @@ function RejectedCandidates({
             Excluded by automated fit checks, but still available for your review.
           </p>
           {candidates.map((candidate) => (
-            <article key={candidate._id} className="rounded border border-border p-3">
+            <article
+              key={candidate._id}
+              className="rounded border border-[#dfccc5] bg-[#f8efec] p-3"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold">{candidate.name}</h3>
@@ -208,26 +277,25 @@ export function EventWorkspace({
   event,
   research,
   sendToken,
+  providerCredentials,
 }: {
-  event: Doc<"events">;
+  event: Omit<Doc<"events">, "requestKey" | "sendToken">;
   research: ResearchResult;
   sendToken: string | null;
+  providerCredentials: ProviderCredentials | null;
 }) {
   if (event.researchStage !== "review_ready") {
     return <ResearchProgress event={event} />;
   }
 
-  const completedCount = event.activities.filter(
-    (activity) => activity.state === "completed",
-  ).length;
   const venues = research?.venues ?? [];
   const drafts = research?.drafts ?? [];
   const rejectedCandidates = research?.rejectedCandidates ?? [];
 
   return (
-    <main className="min-h-svh p-3 sm:p-5">
-      <div className="mx-auto grid min-h-[calc(100svh-1.5rem)] max-w-[90rem] gap-3 lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)_22rem]">
-        <aside className="flex flex-col rounded border border-border bg-card p-4 lg:p-5">
+    <main className="min-h-svh bg-[#f3f1ec]">
+      <div className="mx-auto grid min-h-svh max-w-[90rem] lg:grid-cols-[16rem_minmax(0,1fr)] lg:border-x lg:border-[#dedbd4]">
+        <aside className="flex flex-col border-b border-[#e3d3bd] bg-[#f8f0e4] p-4 lg:border-r lg:border-b-0 lg:p-5">
           <Link
             href="/"
             className="w-fit text-sm font-semibold tracking-[-0.02em] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -236,7 +304,7 @@ export function EventWorkspace({
           </Link>
 
           <div className="mt-8 border-b border-border pb-5">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#8a6338]">
               Event brief
             </p>
             <h1 className="mt-2 line-clamp-2 text-base font-semibold leading-6 tracking-[-0.02em]">
@@ -249,151 +317,118 @@ export function EventWorkspace({
 
           <nav className="mt-4" aria-label="Event workspace">
             <ul className="space-y-1">
-              {workspaceLinks.map(({ label, icon: Icon, active }) => (
-                <li key={label}>
-                  <span
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm",
-                      active
-                        ? "bg-secondary font-medium text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon className="size-4" aria-hidden="true" />
-                    {label}
+              {workspaceLinks
+                .filter(({ label }) => label !== "Outreach" || drafts.length > 0)
+                .map(({ label, icon: Icon, target }) => (
+                  <li key={label}>
+                    <a
+                      href={`#${target}`}
+                      className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:bg-[#eee1cf] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      <Icon className="size-4" aria-hidden="true" />
+                      {label}
+                    </a>
+                  </li>
+                ))}
+              <li>
+                <a
+                  href={eventInboxHref(event._id, sendToken)}
+                  className="flex items-center justify-between gap-2.5 rounded px-2.5 py-2 text-sm text-[#315b39] hover:bg-[#e6eadf] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Inbox className="size-4" aria-hidden="true" />
+                    Outreach inbox
                   </span>
-                </li>
-              ))}
+                </a>
+              </li>
             </ul>
           </nav>
-
-          <p className="mt-auto hidden pt-8 text-[0.68rem] leading-5 text-muted-foreground lg:block">
-            Event ID<br />
-            <span className="font-medium text-foreground">{event._id}</span>
-          </p>
         </aside>
 
         <section
-          aria-labelledby="activity-title"
-          aria-live="polite"
-          className="rounded border border-border bg-card p-5 sm:p-7"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
-            <div>
-              <Badge variant="outline" className="gap-1.5 font-medium text-muted-foreground">
-                <span className="size-1.5 rounded-full bg-clay" aria-hidden="true" />
-                {event.researchStage === "review_ready"
-                  ? "AI research reviewed"
-                  : "AI research in progress"}
-              </Badge>
-              <h2 id="activity-title" className="mt-4 text-2xl font-semibold tracking-[-0.035em]">
-                Sourcing your venue
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Follow the useful actions Gatherly takes for this event.
-              </p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {completedCount} of {event.activities.length} complete
-            </p>
-          </div>
-
-          <ol className="mt-2 divide-y divide-border">
-            {event.activities.map((activity) => (
-              <li key={activity.key} className="grid grid-cols-[2.25rem_1fr] gap-3 py-5">
-                <span
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded border",
-                    activity.state === "completed" &&
-                      "border-graphite bg-graphite text-primary-foreground",
-                    activity.state === "active" &&
-                      "border-clay/40 bg-clay/10 text-clay",
-                    activity.state === "queued" &&
-                      "border-border bg-secondary text-muted-foreground",
-                    activity.state === "failed" &&
-                      "border-destructive/30 bg-destructive/10 text-destructive",
-                    activity.state === "approval_required" &&
-                      "border-graphite/30 bg-secondary text-foreground",
-                  )}
-                >
-                  <ActivityIcon state={activity.state} />
-                </span>
-                <div className="min-w-0 pt-0.5">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 className="text-sm font-semibold">{activity.label}</h3>
-                    <span className="text-[0.68rem] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                      {stateLabels[activity.state]}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    {activity.description}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <aside
           aria-labelledby="venues-title"
-          className="flex flex-col rounded border border-border bg-card p-5"
+          className="flex min-w-0 flex-col bg-[#f1f6ef] px-4 py-5 sm:px-6"
         >
-          <div className="flex items-center justify-between border-b border-border pb-4">
-            <h2 id="venues-title" className="text-sm font-semibold">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+            <h2
+              id="venues-title"
+              className="text-xl font-semibold tracking-[-0.025em] text-[#355a3d]"
+            >
               Venue results
             </h2>
-            <span className="text-xs text-muted-foreground">{venues.length} found</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs text-muted-foreground">{venues.length} found</span>
+              <CopyEventId eventId={event._id} />
+            </div>
           </div>
 
           {venues.length > 0 ? (
-            <div className="flex-1 space-y-3 overflow-y-auto py-4">
+            <div className="flex-1 divide-y divide-[#cad9c5]">
               {venues.map((venue, index) => {
                 const draft = drafts.find((item) => item.venueId === venue._id);
                 const image = venue.images?.[0];
                 return (
-                  <article key={venue._id} className="overflow-hidden rounded border border-border">
-                    {image ? (
-                      <a href={image.sourceUrl} target="_blank" rel="noreferrer">
-                        {/* Firecrawl returns arbitrary HTTPS image hosts, so Next Image cannot safely predeclare them. */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={image.url}
-                          alt={image.alt}
-                          className="aspect-[16/9] w-full border-b border-border object-cover"
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
-                      </a>
-                    ) : (
-                      <p className="border-b border-border bg-secondary px-3.5 py-3 text-xs text-muted-foreground">
-                        No sourced image found.
-                      </p>
-                    )}
-                    <div className="p-3.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-semibold">{venue.name}</h3>
-                          <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
-                            <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-                            {venue.address ?? venue.location}
-                          </p>
-                        </div>
+                  <article
+                    key={venue._id}
+                    className={cn("py-4", index === 0 && "bg-[#eaf3e5]/60")}
+                  >
+                    <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+                      {image ? (
                         <a
-                          href={venue.websiteUrl}
+                          href={image.sourceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label={`Open ${venue.name} website`}
-                          className="text-muted-foreground hover:text-foreground"
+                          className="block overflow-hidden rounded border border-border bg-white"
                         >
-                          <ExternalLink className="size-4" aria-hidden="true" />
+                          {/* Firecrawl returns arbitrary HTTPS image hosts, so Next Image cannot safely predeclare them. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.url}
+                            alt={image.alt}
+                            className="h-24 w-full object-cover sm:h-28"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                          />
                         </a>
+                      ) : (
+                        <p className="flex h-24 items-center justify-center rounded border border-border bg-[#f4eee3] px-3 text-center text-xs text-muted-foreground sm:h-28">
+                          No sourced image found.
+                        </p>
+                      )}
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold">{venue.name}</h3>
+                            <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                              <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                              {venue.address ?? venue.location}
+                            </p>
+                          </div>
+                          <a
+                            href={venue.websiteUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`Open ${venue.name} website`}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <ExternalLink className="size-4" aria-hidden="true" />
+                          </a>
+                        </div>
+                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                          {venue.fitSummary}
+                        </p>
                       </div>
-                      <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                        {venue.fitSummary}
-                      </p>
+                    </div>
+                    <div className="mt-3 border-t border-border pt-3">
                       {venue.recommendationScore !== undefined ? (
-                        <div className="mt-3 rounded border border-border bg-secondary p-2.5">
+                        <div
+                          className={cn(
+                            "border-l-2 px-3 py-2.5",
+                            index === 0
+                              ? "border-[#9db88d] bg-[#deecd7]"
+                              : "border-[#b9ced6] bg-[#edf3f5]",
+                          )}
+                        >
                           <Badge variant="outline" className="text-[0.68rem]">
                             {index === 0 ? "Recommended" : "Fit score"} ·{" "}
                             {venue.recommendationScore}/100
@@ -424,7 +459,7 @@ export function EventWorkspace({
                       {venue.reviews?.slice(0, 2).map((review) => (
                         <div
                           key={review.sourceUrl}
-                          className="mt-3 rounded border border-border bg-secondary p-2.5"
+                          className="mt-3 border-l-2 border-[#d8c9aa] bg-[#f6f1e8] px-3 py-2.5"
                         >
                           <div className="flex items-center justify-between gap-2 text-xs">
                             <span className="flex items-center gap-1 font-medium">
@@ -460,7 +495,7 @@ export function EventWorkspace({
                           {venue.amenities.slice(0, 6).map((amenity) => (
                             <li
                               key={amenity}
-                              className="rounded border border-border px-1.5 py-1 text-[0.68rem]"
+                              className="rounded border border-[#d2dfcc] bg-[#f0f5ed] px-1.5 py-1 text-[0.68rem]"
                             >
                               {amenity}
                             </li>
@@ -492,9 +527,12 @@ export function EventWorkspace({
                         View source <ExternalLink className="size-3" aria-hidden="true" />
                       </a>
                       {draft ? (
-                        <div className="mt-4 border-t border-border pt-3">
-                          <p className="mb-2 text-xs font-medium">{draft.subject}</p>
-                          <DraftSendButton
+                        <div
+                          id={draft._id === drafts[0]?._id ? "outreach" : undefined}
+                          className="mt-4 border-t border-border pt-3"
+                        >
+                          <OutreachComposer
+                            key={draft._id}
                             eventId={event._id}
                             draft={draft}
                             venueName={venue.name}
@@ -502,6 +540,8 @@ export function EventWorkspace({
                               venue.contactType === "email" ? venue.contactValue : null
                             }
                             sendToken={sendToken}
+                            providerCredentials={providerCredentials}
+                            isDemo={event.isDemo}
                           />
                         </div>
                       ) : null}
@@ -512,7 +552,7 @@ export function EventWorkspace({
             </div>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center py-14 text-center lg:py-8">
-              <span className="flex size-11 items-center justify-center rounded bg-secondary text-muted-foreground">
+              <span className="flex size-11 items-center justify-center rounded bg-[#dfeadd] text-[#45654b]">
                 <Search className="size-5" aria-hidden="true" />
               </span>
               <h3 className="mt-4 text-sm font-semibold">No verified venues found</h3>
@@ -524,13 +564,13 @@ export function EventWorkspace({
 
           <RejectedCandidates candidates={rejectedCandidates} />
 
-          <div className="rounded border border-border bg-secondary p-3.5">
+          <div className="border-t border-[#cbdde2] py-3">
             <p className="flex items-center gap-2 text-xs font-medium">
-              <ShieldCheck className="size-4 text-clay" aria-hidden="true" />
+              <ShieldCheck className="size-4 text-[#4b7180]" aria-hidden="true" />
               AgentMail sends only after your confirmation.
             </p>
           </div>
-        </aside>
+        </section>
       </div>
     </main>
   );

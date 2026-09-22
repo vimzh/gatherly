@@ -1,0 +1,215 @@
+{
+  "title": "From event brief to human-controlled outreach",
+  "subtitle": "Gatherly turns public evidence into a reviewed shortlist while the organizer keeps the irreversible decisions",
+  "description": "Product flow from an organizer's event brief through evidence-backed venue research to a human-confirmed outreach message and final venue decision.",
+  "footer": "Research is automatic. Outreach is confirmed. Booking stays human.",
+  "zones": [
+    {
+      "id": "start",
+      "label": "1 · START WITH THE EVENT",
+      "tone": "blue",
+      "width": 0.82
+    },
+    {
+      "id": "proof",
+      "label": "2 · TURN SEARCH INTO EVIDENCE",
+      "tone": "violet",
+      "width": 1.55
+    },
+    {
+      "id": "decide",
+      "label": "3 · KEEP THE HUMAN IN CHARGE",
+      "tone": "green",
+      "width": 1.3
+    }
+  ],
+  "nodes": [
+    {
+      "id": "brief",
+      "zone": "start",
+      "title": "Describe the event once",
+      "body": [
+        "place · guests · dates · must-haves"
+      ],
+      "status": "external",
+      "size": "wide",
+      "row": 1,
+      "span": 2,
+      "evidence": [
+        "src/app/page.tsx",
+        "src/components/gatherly/event-brief-form.tsx",
+        "convex/events.ts"
+      ]
+    },
+    {
+      "id": "workspace",
+      "zone": "start",
+      "title": "Follow one live workspace",
+      "body": [
+        "bookmarkable event URL",
+        "research stages update without polling"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 2,
+      "span": 2,
+      "evidence": [
+        "src/lib/event-navigation.ts",
+        "src/components/gatherly/event-page-client.tsx",
+        "src/components/gatherly/event-workspace.tsx"
+      ]
+    },
+    {
+      "id": "evidence",
+      "zone": "proof",
+      "title": "Gather public venue evidence",
+      "body": [
+        "official pages · capacity · contacts",
+        "images · independent reviews"
+      ],
+      "note": "Firecrawl results stay linked to their sources",
+      "status": "external",
+      "size": "wide",
+      "row": 1,
+      "span": 2,
+      "evidence": [
+        "convex/research.ts",
+        "convex/lib/firecrawlEvidence.ts"
+      ]
+    },
+    {
+      "id": "challenge",
+      "zone": "proof",
+      "title": "Build, then challenge the shortlist",
+      "body": [
+        "planner + discovery + research",
+        "an independent critic corrects weak claims"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 2,
+      "span": 2,
+      "evidence": [
+        "convex/research.ts",
+        "convex/lib/researchWorkflow.ts"
+      ]
+    },
+    {
+      "id": "gate",
+      "zone": "proof",
+      "title": "Fourteen checks hold the line",
+      "body": [
+        "grounded URLs · capacity · valid reviews",
+        "safe outreach · aligned agent handoffs"
+      ],
+      "note": "Weak candidates remain inspectable, not promoted",
+      "status": "implemented",
+      "size": "wide",
+      "row": 3,
+      "span": 2,
+      "evidence": [
+        "convex/lib/researchWorkflow.ts",
+        "convex/researchData.ts",
+        "convex/lib/researchWorkflow.test.ts"
+      ]
+    },
+    {
+      "id": "results",
+      "zone": "decide",
+      "title": "Review ranked options live",
+      "body": [
+        "sources and unknowns stay visible",
+        "rejected candidates keep an audit trail"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 1,
+      "span": 2,
+      "evidence": [
+        "src/components/gatherly/event-page-client.tsx",
+        "src/components/gatherly/event-workspace.tsx",
+        "convex/researchData.ts"
+      ]
+    },
+    {
+      "id": "confirm",
+      "zone": "decide",
+      "title": "Confirm one outreach message",
+      "body": [
+        "venue + recipient are confirmed",
+        "AgentMail sends only after the click"
+      ],
+      "note": "The full draft editor is future work",
+      "status": "implemented",
+      "size": "wide",
+      "row": 2,
+      "span": 2,
+      "evidence": [
+        "src/components/gatherly/event-workspace.tsx",
+        "convex/outreach.ts",
+        "convex/outreachData.ts"
+      ]
+    },
+    {
+      "id": "decision",
+      "zone": "decide",
+      "title": "You make the venue decision",
+      "body": [
+        "negotiate · visit · contract outside Gatherly"
+      ],
+      "note": "No automatic booking or reply handling",
+      "status": "external",
+      "size": "wide",
+      "row": 3,
+      "span": 2,
+      "evidence": [
+        "docs/idea.md",
+        "src/components/gatherly/event-workspace.tsx"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "brief",
+      "to": "workspace",
+      "tone": "blue",
+      "route": "vertical"
+    },
+    {
+      "from": "workspace",
+      "to": "evidence",
+      "tone": "violet",
+      "route": "orthogonal"
+    },
+    {
+      "from": "evidence",
+      "to": "challenge",
+      "tone": "violet",
+      "route": "vertical"
+    },
+    {
+      "from": "challenge",
+      "to": "gate",
+      "tone": "violet",
+      "route": "vertical"
+    },
+    {
+      "from": "gate",
+      "to": "results",
+      "tone": "green",
+      "route": "orthogonal"
+    },
+    {
+      "from": "results",
+      "to": "confirm",
+      "tone": "green",
+      "route": "vertical"
+    },
+    {
+      "from": "confirm",
+      "to": "decision",
+      "tone": "green",
+      "route": "vertical"
+    }
+  ]
+}

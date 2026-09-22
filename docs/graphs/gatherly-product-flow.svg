@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title description" data-layout-version="cloudy-native-v2" data-spec-sha256="e4ad8dd638af7084508e6a61f8cf91a0820f76ca8e244cea07f9d14626f05b00">
+  <title id="title">From event brief to human-controlled outreach</title>
+  <desc id="description">Product flow from an organizer&#x27;s event brief through evidence-backed venue research to a human-confirmed outreach message and final venue decision.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/></marker>
+    <marker id="arrow-violet" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7c3aed"/></marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#16a34a"/></marker>
+    <marker id="arrow-amber" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#d97706"/></marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#0f766e"/></marker>
+    <marker id="arrow-rose" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#e11d48"/></marker>
+    <marker id="arrow-slate" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#57534e"/></marker>
+    <style>
+      text { font-family: "Comic Sans MS", "Segoe Print", cursive; }
+      .title { font-size: 36px; fill: #292524; }
+      .subtitle { font-size: 17px; fill: #78716c; }
+      .zone-label { font-size: 14px; letter-spacing: 1px; }
+      .node-title { font-size: 20px; fill: #292524; }
+      .node-body { font-size: 15px; fill: #44403c; }
+      .node-note { font-size: 13px; fill: #57534e; }
+      .edge-label { font-size: 13px; fill: #57534e; paint-order: stroke; stroke: #fffdf8; stroke-width: 4px; stroke-linejoin: round; }
+      .footer { font-size: 13px; fill: #57534e; }
+      .arrow { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#fffdf8"/>
+  <text x="54" y="62" class="title">From event brief to human-controlled outreach</text>
+  <text x="54" y="94" class="subtitle">Gatherly turns public evidence into a reviewed shortlist while the organizer keeps the irreversible decisions</text>
+  <rect data-zone-id="start" x="42.0" y="130" width="326.2" height="690" rx="28" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="62.0" y="160" class="zone-label" fill="#1e40af">1 · START WITH THE EVENT</text>
+  <rect data-zone-id="proof" x="396.2" y="130" width="616.6" height="690" rx="28" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="416.2" y="160" class="zone-label" fill="#5b21b6">2 · TURN SEARCH INTO EVIDENCE</text>
+  <rect data-zone-id="decide" x="1040.8" y="130" width="517.2" height="690" rx="28" fill="#f0fdf4" stroke="#86efac" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="1060.8" y="160" class="zone-label" fill="#166534">3 · KEEP THE HUMAN IN CHARGE</text>
+  <path class="arrow" data-edge="brief--workspace" d="M205.1 324.0 V331.0" stroke="#2563eb" marker-end="url(#arrow-blue)"/>
+  <path class="arrow" data-edge="workspace--evidence" d="M338.2 408.0 H382.2 V258.0 H426.2" stroke="#7c3aed" marker-end="url(#arrow-violet)"/>
+  <path class="arrow" data-edge="evidence--challenge" d="M704.5 326.0 V352.0" stroke="#7c3aed" marker-end="url(#arrow-violet)"/>
+  <path class="arrow" data-edge="challenge--gate" d="M704.5 464.0 V490.0" stroke="#7c3aed" marker-end="url(#arrow-violet)"/>
+  <path class="arrow" data-edge="gate--results" d="M982.8 558.0 H1026.8 V258.0 H1070.8" stroke="#16a34a" marker-end="url(#arrow-green)"/>
+  <path class="arrow" data-edge="results--confirm" d="M1299.4 314.0 V340.0" stroke="#16a34a" marker-end="url(#arrow-green)"/>
+  <path class="arrow" data-edge="confirm--decision" d="M1299.4 476.0 V501.0" stroke="#16a34a" marker-end="url(#arrow-green)"/>
+  <rect class="node" data-node-id="brief" data-status="external" x="72.0" y="192.0" width="266.2" height="132.0" rx="22" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="205.1" y="227.0" text-anchor="middle" class="node-title">Describe the event</text>
+  <text x="205.1" y="253.0" text-anchor="middle" class="node-title">once</text>
+  <text x="205.1" y="284.0" text-anchor="middle" class="node-body">place · guests · dates ·</text>
+  <text x="205.1" y="306.0" text-anchor="middle" class="node-body">must-haves</text>
+  <rect class="node" data-node-id="workspace" data-status="implemented" x="72.0" y="331.0" width="266.2" height="154.0" rx="22" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="205.1" y="366.0" text-anchor="middle" class="node-title">Follow one live</text>
+  <text x="205.1" y="392.0" text-anchor="middle" class="node-title">workspace</text>
+  <text x="205.1" y="423.0" text-anchor="middle" class="node-body">bookmarkable event URL</text>
+  <text x="205.1" y="445.0" text-anchor="middle" class="node-body">research stages update</text>
+  <text x="205.1" y="467.0" text-anchor="middle" class="node-body">without polling</text>
+  <rect class="node" data-node-id="evidence" data-status="external" x="426.2" y="190.0" width="556.6" height="136.0" rx="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="704.5" y="225.0" text-anchor="middle" class="node-title">Gather public venue evidence</text>
+  <text x="704.5" y="256.0" text-anchor="middle" class="node-body">official pages · capacity · contacts</text>
+  <text x="704.5" y="278.0" text-anchor="middle" class="node-body">images · independent reviews</text>
+  <text x="704.5" y="308.0" text-anchor="middle" class="node-note">Firecrawl results stay linked to their sources</text>
+  <rect class="node" data-node-id="challenge" data-status="implemented" x="426.2" y="352.0" width="556.6" height="112.0" rx="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="704.5" y="387.0" text-anchor="middle" class="node-title">Build, then challenge the shortlist</text>
+  <text x="704.5" y="418.0" text-anchor="middle" class="node-body">planner + discovery + research</text>
+  <text x="704.5" y="440.0" text-anchor="middle" class="node-body">an independent critic corrects weak claims</text>
+  <rect class="node" data-node-id="gate" data-status="implemented" x="426.2" y="490.0" width="556.6" height="136.0" rx="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="704.5" y="525.0" text-anchor="middle" class="node-title">Fourteen checks hold the line</text>
+  <text x="704.5" y="556.0" text-anchor="middle" class="node-body">grounded URLs · capacity · valid reviews</text>
+  <text x="704.5" y="578.0" text-anchor="middle" class="node-body">safe outreach · aligned agent handoffs</text>
+  <text x="704.5" y="608.0" text-anchor="middle" class="node-note">Weak candidates remain inspectable, not promoted</text>
+  <rect class="node" data-node-id="results" data-status="implemented" x="1070.8" y="202.0" width="457.2" height="112.0" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="1299.4" y="237.0" text-anchor="middle" class="node-title">Review ranked options live</text>
+  <text x="1299.4" y="268.0" text-anchor="middle" class="node-body">sources and unknowns stay visible</text>
+  <text x="1299.4" y="290.0" text-anchor="middle" class="node-body">rejected candidates keep an audit trail</text>
+  <rect class="node" data-node-id="confirm" data-status="implemented" x="1070.8" y="340.0" width="457.2" height="136.0" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="1299.4" y="375.0" text-anchor="middle" class="node-title">Confirm one outreach message</text>
+  <text x="1299.4" y="406.0" text-anchor="middle" class="node-body">venue + recipient are confirmed</text>
+  <text x="1299.4" y="428.0" text-anchor="middle" class="node-body">AgentMail sends only after the click</text>
+  <text x="1299.4" y="458.0" text-anchor="middle" class="node-note">The full draft editor is future work</text>
+  <rect class="node" data-node-id="decision" data-status="external" x="1070.8" y="501.0" width="457.2" height="114.0" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="1299.4" y="536.0" text-anchor="middle" class="node-title">You make the venue decision</text>
+  <text x="1299.4" y="567.0" text-anchor="middle" class="node-body">negotiate · visit · contract outside Gatherly</text>
+  <text x="1299.4" y="597.0" text-anchor="middle" class="node-note">No automatic booking or reply handling</text>
+  <rect x="54" y="844" width="1492" height="36" rx="14" fill="#f5f5f4" stroke="#d6d3d1"/>
+  <text x="800" y="868" text-anchor="middle" class="footer">Research is automatic. Outreach is confirmed. Booking stays human.</text>
+</svg>

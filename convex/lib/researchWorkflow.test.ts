@@ -130,7 +130,7 @@ function makeEvidence(count = 2): FirecrawlEvidence {
         summary: "Review summary",
         markdown: "Rated 4.2 out of 5 from 120 public reviews.",
         emails: [],
-        links: [],
+        links: [`https://venue-${number}.example.com`],
         images: [],
       },
     ]),
@@ -143,6 +143,94 @@ function makeEvidence(count = 2): FirecrawlEvidence {
 }
 
 describe("research workflow scenarios", () => {
+  it("rejects booking claims in an email subject even when its body is safe", () => {
+    const plan = makePlan(scenarios[0]);
+    plan.venues[0].outreach.subject = "Your booking is confirmed";
+    expect(verifyResearchPlan(plan, makeEvidence()).find((check) => check.key === "outreach_safety")?.passed).toBe(false);
+  });
+
+  it("does not accept a different city just because its name contains the planner location", () => {
+    const plan = makePlan(scenarios[6]);
+    expect(verifyResearchPlan(plan, makeEvidence(), {
+      ...plan.requirements, location: "York",
+    }).find((check) => check.key === "agent_handoff")?.passed).toBe(false);
+  });
+
+  it("rejects another venue's email, contact source, image, or review", async () => {
+    const original = makePlan(scenarios[0]);
+    const evidence = makeEvidence();
+    for (const field of ["contact", "images", "reviews", "capacity", "evidence"] as const) {
+      const plan = structuredClone(original);
+      Object.assign(plan.venues[0], { [field]: structuredClone(plan.venues[1][field]) });
+      await expect(runResearchWorkflow(scenarios[0][0], evidence, {
+        research: async () => plan,
+        critique: async () => ({ approved: true, summary: "Approved in error.", issues: [], revisedPlan: plan }),
+      })).rejects.toThrow("Final verification failed");
+    }
+    const plan = structuredClone(original);
+    plan.venues[0].contact.value = "events@venue-2.example.com";
+    expect(verifyResearchPlan(plan, evidence).find((check) => check.key === "email_grounding")?.passed).toBe(false);
+  });
+
+  it("does not treat a suffix of an observed email as an observed recipient", async () => {
+    const plan = makePlan(scenarios[0]);
+    plan.venues[0].contact.value = "vents@venue-1.example.com";
+    expect(verifyResearchPlan(plan, makeEvidence()).find((check) => check.key === "email_grounding")?.passed).toBe(false);
+  });
+
+  it("requires a phone number on the exact cited venue page", () => {
+    const plan = makePlan(scenarios[0]);
+    const evidence = makeEvidence();
+    plan.venues[0].contact = {
+      type: "phone", value: "+44 20 7946 0000", sourceUrl: evidence.pages[0].url,
+    };
+    const check = () => verifyResearchPlan(plan, evidence).find((item) => item.key === "contact_route")?.passed;
+    expect(check()).toBe(false);
+    evidence.pages[0].markdown += " Telephone: +44 (20) 7946-0000.";
+    expect(check()).toBe(true);
+  });
+
+  it("rejects searched images whose title only contains a venue-name substring", () => {
+    const plan = makePlan(scenarios[0]);
+    const evidence = makeEvidence();
+    plan.venues[0].name = "Hall";
+    const image = { url: "https://images.example.com/unrelated.jpg", sourceUrl: "https://other.example.com/gallery", title: "Townhall exterior" };
+    evidence.images.push(image);
+    plan.venues[0].images = [{ ...image, alt: "Hall" }];
+    expect(verifyResearchPlan(plan, evidence).find((check) => check.key === "property_profile")?.passed).toBe(false);
+  });
+
+  it("accepts official gallery images and evidenced venue-hire operator contacts", async () => {
+    const plan = makePlan(scenarios[0]);
+    const evidence = makeEvidence();
+    const image = { url: "https://images.example.com/gallery.jpg", sourceUrl: "https://venue-1.example.com/gallery", title: "Main hall" };
+    evidence.images.push(image);
+    plan.venues[0].images = [{ ...image, alt: "Main hall" }];
+    const operatorPage = {
+      ...structuredClone(evidence.pages[0]),
+      title: `${plan.venues[0].name} venue-hire operator`,
+      url: "https://hire-operator.example.com/contact",
+      emails: ["events@hire-operator.example.com"],
+    };
+    evidence.pages.push(operatorPage);
+    plan.venues[0].contact = { type: "email", value: operatorPage.emails[0], sourceUrl: operatorPage.url };
+    const result = await runResearchWorkflow(scenarios[0][0], evidence, {
+      research: async () => plan,
+      critique: async () => ({ approved: true, summary: "Verified operator and gallery.", issues: [], revisedPlan: plan }),
+    });
+    expect(result.verification.every((check) => check.passed)).toBe(true);
+  });
+
+  it("preserves distinct non-Latin venue names", async () => {
+    const plan = makePlan(scenarios[0]);
+    plan.venues[0].name = "東京会場";
+    plan.venues[1].name = "大阪会場";
+    const result = await runResearchWorkflow(scenarios[0][0], makeEvidence(), {
+      research: async () => plan,
+      critique: async () => ({ approved: true, summary: "Verified sources.", issues: [], revisedPlan: plan }),
+    });
+    expect(result.plan.venues).toHaveLength(2);
+  });
   it("keeps Firecrawl pages, images, and review provenance in a bounded bundle", () => {
     const evidence = normalizeFirecrawlEvidence(
       {
@@ -293,6 +381,58 @@ describe("research workflow scenarios", () => {
     expect(result.draft.venues).toHaveLength(3);
     expect(result.plan.venues.map((venue) => venue.recommendationScore)).toEqual([85, 80]);
     expect(result.verification.every((check) => check.passed)).toBe(true);
+  });
+
+  it("does not retain a weak venue to make verification pass", async () => {
+    const plan = makePlan(scenarios[0]);
+    plan.venues[1].images = [];
+    plan.venues[1].reviews = [];
+    plan.venues.push({
+      ...structuredClone(plan.venues[0]),
+      name: "London hackathon Venue 3",
+      websiteUrl: "https://venue-3.example.com",
+      recommendationScore: 20,
+      capacity: {
+        ...plan.venues[0].capacity,
+        sourceUrl: "https://venue-3.example.com/capacity",
+      },
+      contact: {
+        type: "email",
+        value: "events@venue-3.example.com",
+        sourceUrl: "https://venue-3.example.com/contact",
+      },
+      evidence: [
+        {
+          ...plan.venues[0].evidence[0],
+          sourceUrl: "https://venue-3.example.com/events",
+        },
+      ],
+      images: [
+        {
+          ...plan.venues[0].images[0],
+          url: "https://images.example.com/3.jpg",
+          sourceUrl: "https://venue-3.example.com",
+        },
+      ],
+      reviews: [
+        {
+          ...plan.venues[0].reviews[0],
+          sourceUrl: "https://reviews.example.com/venue-3",
+        },
+      ],
+    });
+
+    await expect(
+      runResearchWorkflow(scenarios[0][0], makeEvidence(3), {
+        research: async () => plan,
+        critique: async () => ({
+          approved: true,
+          summary: "Two strong candidates remain after review.",
+          issues: [],
+          revisedPlan: plan,
+        }),
+      }),
+    ).rejects.toThrow("property_profile");
   });
 
   it("stops when the independent critic does not approve the revision", async () => {

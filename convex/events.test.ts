@@ -21,7 +21,7 @@ describe("events", () => {
     ).rejects.toThrow("Event briefs must be 4,000 characters or fewer.");
   });
 
-  it("stores a trimmed brief with honest demo activity", async () => {
+  it("stores a trimmed live brief without spending provider credits", async () => {
     const t = convexTest(schema, modules);
     const created = await t.mutation(api.events.create, {
       brief: "  300-person creative showcase in London  ",
@@ -36,16 +36,17 @@ describe("events", () => {
     expect(event?.brief).toBe("300-person creative showcase in London");
     expect(created.sendToken).toMatch(/^[0-9a-f-]{36}$/);
     expect(event).not.toHaveProperty("sendToken");
+    // Replaying a creation key returns its send token, so it must remain private too.
+    expect(event).not.toHaveProperty("requestKey");
     expect(event?.status).toBe("researching");
-    expect(event?.isDemo).toBe(true);
+    expect(event?.isDemo).toBe(false);
     expect(event?.activities).toHaveLength(7);
     expect(event?.researchStage).toBe("queued");
     expect(event?.activities.some((item) => item.state === "queued")).toBe(true);
     expect(event?.activities.at(-1)?.label).toBe(
       "Waiting for organizer approval",
     );
-    expect(scheduled).toHaveLength(1);
-    expect(scheduled[0].name).toBe("research:generateForEvent");
+    expect(scheduled).toHaveLength(0);
   });
 
   it("returns the same event for a repeated request key", async () => {
@@ -84,21 +85,27 @@ describe("events", () => {
     });
     const { eventId, sendToken } = created;
 
-    expect(await t.mutation(internal.researchData.begin, { eventId })).toEqual({
+    const attempt = await t.mutation(internal.researchData.begin, { eventId });
+    expect(attempt).toEqual({
       brief: "A 300-person London hackathon",
+      attemptId: expect.any(String),
     });
+    const attemptId = attempt!.attemptId;
     await expect(
       t.mutation(internal.researchData.setAgentStage, {
         eventId,
+        attemptId,
         stage: "enriching",
       }),
     ).rejects.toThrow("Agent stage handoff is out of order.");
     await t.mutation(internal.researchData.setAgentStage, {
       eventId,
+      attemptId,
       stage: "discovering",
     });
     await t.mutation(internal.researchData.setAgentStage, {
       eventId,
+      attemptId,
       stage: "enriching",
     });
     const progressing = await t.query(api.events.get, { eventId });
@@ -111,6 +118,7 @@ describe("events", () => {
     ).toEqual(["capacity", "contacts"]);
     await t.mutation(internal.researchData.complete, {
       eventId,
+      attemptId,
       model: "test-model",
       plan: {
         title: "London hackathon",

@@ -1,4 +1,6 @@
 // Shows the live agent handoffs while Convex researches an event.
+"use client";
+
 import type { LucideIcon } from "lucide-react";
 import {
   BadgeCheck,
@@ -13,11 +15,13 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { CopyEventId } from "./copy-event-id";
 
-type Event = Doc<"events">;
+type Event = Omit<Doc<"events">, "requestKey" | "sendToken">;
 type AgentStage = NonNullable<Event["agentStage"]>;
 type StageState = "completed" | "active" | "queued" | "failed";
 
@@ -80,6 +84,36 @@ const activityLabels: Record<Event["activities"][number]["state"], string> = {
   approval_required: "Your review",
 };
 
+const DEMO_SECONDS = 30;
+
+function demoActivities(event: Event, step: number): Event["activities"] {
+  const activeKeys = [
+    ["brief"],
+    ["search"],
+    ["capacity", "contacts"],
+    ["shortlist", "outreach"],
+    ["shortlist"],
+    ["shortlist"],
+  ][step];
+  const completedKeys = [
+    [],
+    ["brief"],
+    ["brief", "search"],
+    ["brief", "search", "capacity", "contacts"],
+    ["brief", "search", "capacity", "contacts", "outreach"],
+    ["brief", "search", "capacity", "contacts", "outreach"],
+  ][step];
+
+  return event.activities.map((activity) => ({
+    ...activity,
+    state: activeKeys.includes(activity.key)
+      ? ("active" as const)
+      : completedKeys.includes(activity.key)
+        ? ("completed" as const)
+        : ("queued" as const),
+  }));
+}
+
 function StageMarker({ state }: { state: StageState }) {
   if (state === "completed") return <Check className="size-4" aria-hidden="true" />;
   if (state === "active") {
@@ -104,7 +138,13 @@ function readableResearchError(value: string | undefined) {
   return (providerMessage ?? value).split("\n")[0].slice(0, 300);
 }
 
-export function ResearchProgress({ event }: { event: Event }) {
+export function ResearchProgress({
+  event,
+  demoSecondsRemaining,
+}: {
+  event: Event;
+  demoSecondsRemaining?: number;
+}) {
   const currentIndex = Math.max(
     0,
     agentStages.findIndex((stage) => stage.key === event.agentStage),
@@ -131,7 +171,7 @@ export function ResearchProgress({ event }: { event: Event }) {
           >
             Gatherly
           </Link>
-          <span className="text-xs text-muted-foreground">Live event workspace</span>
+          <CopyEventId eventId={event._id} />
         </header>
 
         <section aria-live="polite" className="border-b border-border py-9 sm:py-12">
@@ -151,7 +191,11 @@ export function ResearchProgress({ event }: { event: Event }) {
                   )}
                   aria-hidden="true"
                 />
-                {failed ? "Research needs attention" : "Live research in progress"}
+                {failed
+                  ? "Research needs attention"
+                  : demoSecondsRemaining === undefined
+                    ? "Live research in progress"
+                    : "Agent research in progress"}
               </Badge>
               <h1 className="mt-5 max-w-3xl text-3xl font-semibold tracking-[-0.045em] sm:text-5xl sm:leading-[1.05]">
                 {failed
@@ -161,7 +205,9 @@ export function ResearchProgress({ event }: { event: Event }) {
               <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
                 {failed
                   ? readableResearchError(event.researchError)
-                  : "Six focused agents hand the work forward. This page updates as each one finishes."}
+                  : demoSecondsRemaining === undefined
+                    ? "Six focused agents hand the work forward. This page updates as each one finishes."
+                    : "Each agent gets five seconds before handing the event to the next specialist."}
               </p>
             </div>
 
@@ -176,6 +222,11 @@ export function ResearchProgress({ event }: { event: Event }) {
               <p className="mt-4 text-xs font-medium">
                 Step {currentIndex + 1} of {agentStages.length}
               </p>
+              {demoSecondsRemaining !== undefined ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Venue results in {demoSecondsRemaining}s
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -321,5 +372,43 @@ export function ResearchProgress({ event }: { event: Event }) {
         </section>
       </div>
     </main>
+  );
+}
+
+export function DemoResearchReplay({
+  event,
+  onComplete,
+}: {
+  event: Event;
+  onComplete: () => void;
+}) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const step = Math.min(Math.floor(elapsedSeconds / 5), agentStages.length - 1);
+
+  useEffect(() => {
+    let elapsed = 0;
+    const timer = window.setInterval(() => {
+      elapsed += 1;
+      if (elapsed >= DEMO_SECONDS) {
+        window.clearInterval(timer);
+        onComplete();
+        return;
+      }
+      setElapsedSeconds(elapsed);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [onComplete]);
+
+  return (
+    <ResearchProgress
+      event={{
+        ...event,
+        status: "researching",
+        researchStage: "running",
+        agentStage: agentStages[step].key,
+        activities: demoActivities(event, step),
+      }}
+      demoSecondsRemaining={DEMO_SECONDS - elapsedSeconds}
+    />
   );
 }

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title description" data-layout-version="cloudy-native-v2" data-spec-sha256="0c43caacb65798a0385e14a186caa76d407f201f2b0fd15c4c0512641472be51">
+  <title id="title">Gatherly&#x27;s evidence and outreach boundary</title>
+  <desc id="description">System architecture showing the browser and Convex event state, the Firecrawl and OpenAI research pipeline, deterministic verification, realtime results, and capability-protected AgentMail delivery.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/></marker>
+    <marker id="arrow-violet" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7c3aed"/></marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#16a34a"/></marker>
+    <marker id="arrow-amber" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#d97706"/></marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#0f766e"/></marker>
+    <marker id="arrow-rose" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#e11d48"/></marker>
+    <marker id="arrow-slate" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#57534e"/></marker>
+    <style>
+      text { font-family: "Comic Sans MS", "Segoe Print", cursive; }
+      .title { font-size: 36px; fill: #292524; }
+      .subtitle { font-size: 17px; fill: #78716c; }
+      .zone-label { font-size: 14px; letter-spacing: 1px; }
+      .node-title { font-size: 20px; fill: #292524; }
+      .node-body { font-size: 15px; fill: #44403c; }
+      .node-note { font-size: 13px; fill: #57534e; }
+      .edge-label { font-size: 13px; fill: #57534e; paint-order: stroke; stroke: #fffdf8; stroke-width: 4px; stroke-linejoin: round; }
+      .footer { font-size: 13px; fill: #57534e; }
+      .arrow { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#fffdf8"/>
+  <text x="54" y="62" class="title">Gatherly&#x27;s evidence and outreach boundary</text>
+  <text x="54" y="94" class="subtitle">Convex coordinates live research, persists only reviewed results, and guards the one external side effect</text>
+  <rect data-zone-id="entry" x="42.0" y="130" width="366.9" height="690" rx="28" fill="#eff6ff" stroke="#93c5fd" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="62.0" y="160" class="zone-label" fill="#1e40af">1 · LIVE EVENT STATE</text>
+  <rect data-zone-id="research" x="436.9" y="130" width="598.7" height="690" rx="28" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="456.9" y="160" class="zone-label" fill="#5b21b6">2 · EVIDENCE PIPELINE</text>
+  <rect data-zone-id="delivery" x="1063.6" y="130" width="494.4" height="690" rx="28" fill="#f0fdf4" stroke="#86efac" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="1083.6" y="160" class="zone-label" fill="#166534">3 · CONTROLLED SIDE EFFECT</text>
+  <path class="arrow" data-edge="browser--state" d="M225.5 322.0 V331.0" stroke="#2563eb" marker-end="url(#arrow-blue)"/>
+  <path class="arrow" data-edge="state--scheduled" d="M378.9 408.0 H422.9 V258.0 H466.9" stroke="#7c3aed" marker-end="url(#arrow-violet)"/>
+  <path class="arrow" data-edge="scheduled--providers" d="M736.3 314.0 V340.0" stroke="#7c3aed" marker-end="url(#arrow-violet)"/>
+  <path class="arrow" data-edge="providers--verified" d="M736.3 476.0 V502.0" stroke="#7c3aed" marker-end="url(#arrow-violet)"/>
+  <path class="arrow" data-edge="verified--live" d="M1005.6 558.0 H1049.6 V258.0 H1093.6" stroke="#16a34a" marker-end="url(#arrow-green)"/>
+  <path class="arrow" data-edge="live--guard" d="M1310.8 314.0 V352.0" stroke="#d97706" marker-end="url(#arrow-amber)"/>
+  <path class="arrow" data-edge="guard--agentmail" d="M1310.8 464.0 V490.0" stroke="#16a34a" marker-end="url(#arrow-green)"/>
+  <path class="arrow" data-edge="agentmail--state" d="M1528.0 558.0 H1546.0 V806.0 H54.0 V408.0 H72.0" stroke="#0f766e" marker-end="url(#arrow-teal)"/>
+  <rect class="node" data-node-id="browser" data-status="implemented" x="72.0" y="194.0" width="306.9" height="128.0" rx="22" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="225.5" y="229.0" text-anchor="middle" class="node-title">Browser starts one event</text>
+  <text x="225.5" y="260.0" text-anchor="middle" class="node-body">Next.js calls a Convex mutation</text>
+  <text x="225.5" y="282.0" text-anchor="middle" class="node-body">the URL carries event ID + send</text>
+  <text x="225.5" y="304.0" text-anchor="middle" class="node-body">token</text>
+  <rect class="node" data-node-id="state" data-status="implemented" x="72.0" y="331.0" width="306.9" height="154.0" rx="22" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="225.5" y="366.0" text-anchor="middle" class="node-title">Convex keeps durable</text>
+  <text x="225.5" y="392.0" text-anchor="middle" class="node-title">event state</text>
+  <text x="225.5" y="423.0" text-anchor="middle" class="node-body">brief · stages · venues · drafts</text>
+  <text x="225.5" y="445.0" text-anchor="middle" class="node-body">queries stream changes to the</text>
+  <text x="225.5" y="467.0" text-anchor="middle" class="node-body">workspace</text>
+  <rect class="node" data-node-id="scheduled" data-status="implemented" x="466.9" y="202.0" width="538.7" height="112.0" rx="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="736.3" y="237.0" text-anchor="middle" class="node-title">A scheduled action owns the run</text>
+  <text x="736.3" y="268.0" text-anchor="middle" class="node-body">ordered stage handoffs</text>
+  <text x="736.3" y="290.0" text-anchor="middle" class="node-body">failures become visible event state</text>
+  <rect class="node" data-node-id="providers" data-status="external" x="466.9" y="340.0" width="538.7" height="136.0" rx="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="736.3" y="375.0" text-anchor="middle" class="node-title">Firecrawl feeds structured OpenAI passes</text>
+  <text x="736.3" y="406.0" text-anchor="middle" class="node-body">discover + enrich public evidence</text>
+  <text x="736.3" y="428.0" text-anchor="middle" class="node-body">plan + research + independent critique</text>
+  <text x="736.3" y="458.0" text-anchor="middle" class="node-note">Crawled text is treated as untrusted input</text>
+  <rect class="node" data-node-id="verified" data-status="implemented" x="466.9" y="502.0" width="538.7" height="112.0" rx="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="736.3" y="537.0" text-anchor="middle" class="node-title">The gate writes reviewed results</text>
+  <text x="736.3" y="568.0" text-anchor="middle" class="node-body">14 deterministic checks must pass</text>
+  <text x="736.3" y="590.0" text-anchor="middle" class="node-body">venues + drafts persist together</text>
+  <rect class="node" data-node-id="live" data-status="implemented" x="1093.6" y="202.0" width="434.4" height="112.0" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="1310.8" y="237.0" text-anchor="middle" class="node-title">Reviewed cards appear live</text>
+  <text x="1310.8" y="268.0" text-anchor="middle" class="node-body">ranked evidence + visible unknowns</text>
+  <text x="1310.8" y="290.0" text-anchor="middle" class="node-body">draft status updates without polling</text>
+  <rect class="node" data-node-id="guard" data-status="implemented" x="1093.6" y="352.0" width="434.4" height="112.0" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="1310.8" y="387.0" text-anchor="middle" class="node-title">A capability token guards send</text>
+  <text x="1310.8" y="418.0" text-anchor="middle" class="node-body">event + draft + venue must align</text>
+  <text x="1310.8" y="440.0" text-anchor="middle" class="node-body">state changes to sending before HTTP</text>
+  <rect class="node" data-node-id="agentmail" data-status="external" x="1093.6" y="490.0" width="434.4" height="136.0" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="1310.8" y="525.0" text-anchor="middle" class="node-title">AgentMail sends once</text>
+  <text x="1310.8" y="556.0" text-anchor="middle" class="node-body">message + thread IDs return to Convex</text>
+  <text x="1310.8" y="578.0" text-anchor="middle" class="node-body">failed attempts remain observable</text>
+  <text x="1310.8" y="608.0" text-anchor="middle" class="node-note">Retries reuse one key; stale attempts stop for review</text>
+  <text x="800.0" y="795.0" text-anchor="middle" class="edge-label">delivery state</text>
+  <rect x="54" y="844" width="1492" height="36" rx="14" fill="#f5f5f4" stroke="#d6d3d1"/>
+  <text x="800" y="868" text-anchor="middle" class="footer">Evidence may be incomplete. Unsupported claims do not pass the gate.</text>
+</svg>

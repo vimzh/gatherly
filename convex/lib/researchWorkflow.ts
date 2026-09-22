@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   firecrawlEvidenceUrls,
+  type EvidencePage,
   type FirecrawlEvidence,
 } from "./firecrawlEvidence";
 
@@ -146,7 +147,28 @@ function urlHost(value: string) {
 }
 
 function normalizedPhrase(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+function pageIdentifiesVenue(page: EvidencePage, venue: ResearchPlan["venues"][number]) {
+  const name = normalizedPhrase(venue.name);
+  const text = normalizedPhrase([page.title, page.description, page.summary, page.markdown].join(" "));
+  return normalizedUrl(page.url) === normalizedUrl(venue.websiteUrl) ||
+    page.links.some((link) => normalizedUrl(link) === normalizedUrl(venue.websiteUrl)) ||
+    (name.length > 0 && ` ${text} `.includes(` ${name} `));
+}
+
+function emailSource(venue: ResearchPlan["venues"][number], evidence: FirecrawlEvidence) {
+  return evidence.pages.find((page) =>
+    page.purpose === "venue" &&
+    pageIdentifiesVenue(page, venue) &&
+    page.emails.some((email) => email.toLowerCase() === venue.contact.value.trim().toLowerCase()),
+  );
+}
+
+function venueSource(venue: ResearchPlan["venues"][number], url: string, evidence: FirecrawlEvidence) {
+  return evidence.pages.some((page) => pageIdentifiesVenue(page, venue) &&
+    [page.url, ...page.links].some((source) => normalizedUrl(source) === normalizedUrl(url)));
 }
 
 export function verifyResearchPlan(
@@ -175,15 +197,6 @@ export function verifyResearchPlan(
   ];
   const normalizedNames = plan.venues.map((venue) => venue.name.trim().toLowerCase());
   const normalizedWebsites = plan.venues.map((venue) => venue.websiteUrl.trim().toLowerCase());
-  const evidenceText = evidence.pages
-    .flatMap((page) => [page.description, page.summary, page.markdown, ...page.emails])
-    .join("\n")
-    .toLowerCase();
-  const reviewPageUrls = new Set(
-    evidence.pages
-      .filter((page) => page.purpose === "review")
-      .map((page) => normalizedUrl(page.url)),
-  );
   const blockedReviewHosts = [
     "facebook.com",
     "glassdoor.com",
@@ -198,11 +211,20 @@ export function verifyResearchPlan(
   const contactsValid = plan.venues.every((venue) => {
     if (!isHttpsUrl(venue.contact.sourceUrl)) return false;
     if (venue.contact.type === "email") return EMAIL_PATTERN.test(venue.contact.value);
-    if (venue.contact.type === "contact_form") return isHttpsUrl(venue.contact.value);
-    return venue.contact.value.trim().length >= 7;
+    if (venue.contact.type === "contact_form") return isHttpsUrl(venue.contact.value) &&
+      normalizedUrl(venue.contact.value) === normalizedUrl(venue.contact.sourceUrl) &&
+      evidence.pages.some((page) => pageIdentifiesVenue(page, venue) &&
+        [page.url, ...page.links].some((url) => normalizedUrl(url) === normalizedUrl(venue.contact.value)));
+    const digits = venue.contact.value.replace(/\D/g, "");
+    return digits.length >= 7 && evidence.pages.some((page) =>
+      normalizedUrl(page.url) === normalizedUrl(venue.contact.sourceUrl) &&
+      pageIdentifiesVenue(page, venue) &&
+      ([page.description, page.summary, page.markdown].join("\n").match(/\+?\d[\d ().-]{5,}\d/g) ?? [])
+        .some((phone) => phone.replace(/\D/g, "") === digits));
   });
   const capacityClaimsSourced = plan.venues.every(
-    (venue) => venue.capacity.maximum === null || isHttpsUrl(venue.capacity.sourceUrl ?? ""),
+    (venue) => venue.capacity.maximum === null ||
+      (isHttpsUrl(venue.capacity.sourceUrl ?? "") && venueSource(venue, venue.capacity.sourceUrl!, evidence)),
   );
   const capacityFits = plan.venues.every(
     (venue) =>
@@ -213,18 +235,21 @@ export function verifyResearchPlan(
   const outreachSafe = plan.venues.every(
     (venue) =>
       venue.outreach.body.includes("?") &&
-      !UNSAFE_OUTREACH_PATTERN.test(venue.outreach.body),
+      !UNSAFE_OUTREACH_PATTERN.test(`${venue.outreach.subject}\n${venue.outreach.body}`),
   );
   const emailsGrounded = plan.venues.every(
     (venue) =>
       venue.contact.type !== "email" ||
-      evidenceText.includes(venue.contact.value.trim().toLowerCase()),
+      evidence.pages.some((page) =>
+        normalizedUrl(page.url) === normalizedUrl(venue.contact.sourceUrl) &&
+        page.purpose === "venue" && pageIdentifiesVenue(page, venue) &&
+        page.emails.some((email) => email.toLowerCase() === venue.contact.value.trim().toLowerCase())),
   );
   const actualLocation = normalizedPhrase(plan.requirements.location);
   const expectedLocation = normalizedPhrase(expectedRequirements?.location ?? "");
   const handoffAligned =
     !expectedRequirements ||
-    ((actualLocation.includes(expectedLocation) || expectedLocation.includes(actualLocation)) &&
+    (actualLocation === expectedLocation &&
       plan.requirements.attendeeCount === expectedRequirements.attendeeCount &&
       normalizedPhrase(plan.requirements.eventType) ===
         normalizedPhrase(expectedRequirements.eventType));
@@ -239,7 +264,8 @@ export function verifyResearchPlan(
     const reviewsValid = venue.reviews.every((review) => {
       const reviewHost = urlHost(review.sourceUrl);
       return (
-        reviewPageUrls.has(normalizedUrl(review.sourceUrl)) &&
+        evidence.pages.some((page) => page.purpose === "review" &&
+          normalizedUrl(page.url) === normalizedUrl(review.sourceUrl) && pageIdentifiesVenue(page, venue)) &&
         reviewHost !== websiteHost &&
         !blockedReviewHosts.some(
           (host) => reviewHost === host || reviewHost.endsWith(`.${host}`),
@@ -249,10 +275,20 @@ export function verifyResearchPlan(
     return {
       complete: venue.images.length > 0 && venue.reviews.length > 0,
       reviewsValid,
+      imagesValid: venue.images.every((image) =>
+        evidence.pages.some((page) => normalizedUrl(page.url) === normalizedUrl(image.sourceUrl) &&
+          pageIdentifiesVenue(page, venue) && page.images.includes(image.url)) ||
+        evidence.images.some((source) => source.url === image.url && source.sourceUrl !== null &&
+          normalizedUrl(source.sourceUrl) === normalizedUrl(image.sourceUrl) &&
+          (normalizedUrl(source.sourceUrl) === normalizedUrl(venue.websiteUrl) ||
+            normalizedUrl(source.sourceUrl).startsWith(`${normalizedUrl(venue.websiteUrl)}/`) ||
+            venueSource(venue, source.sourceUrl, evidence) ||
+            (normalizedPhrase(venue.name).length > 0 &&
+              ` ${normalizedPhrase(source.title)} `.includes(` ${normalizedPhrase(venue.name)} `))))),
     };
   });
   const propertyProfilesValid =
-    profiles.every((profile) => profile.reviewsValid) &&
+    profiles.every((profile) => profile.reviewsValid && profile.imagesValid) &&
     profiles.filter((profile) => profile.complete).length >=
       Math.min(2, plan.venues.length);
 
@@ -286,8 +322,9 @@ export function verifyResearchPlan(
     },
     {
       key: "evidence_present",
-      passed: plan.venues.every((venue) => venue.evidence.length > 0),
-      detail: "Every venue has at least one cited public source.",
+      passed: plan.venues.every((venue) => venue.evidence.length > 0 &&
+        venue.evidence.every((item) => venueSource(venue, item.sourceUrl, evidence))),
+      detail: "Every venue has cited public sources associated with that venue.",
     },
     {
       key: "firecrawl_grounding",
@@ -326,7 +363,7 @@ export function verifyResearchPlan(
     {
       key: "email_grounding",
       passed: emailsGrounded,
-      detail: "Every included outreach email address appears in the Firecrawl evidence text.",
+      detail: "Every outreach email appears on its cited venue-associated source page.",
     },
     {
       key: "outreach_safety",
@@ -366,14 +403,8 @@ export async function runResearchWorkflow(
           )?.url ?? venue.websiteUrl);
       const groundedEmailSource =
         venue.contact.type === "email" &&
-        !allowedUrls.has(normalizedUrl(venue.contact.sourceUrl))
-          ? evidence.pages.find((page) =>
-              page.emails.some(
-                (email) =>
-                  email.trim().toLowerCase() ===
-                  venue.contact.value.trim().toLowerCase(),
-              ),
-            )?.url
+        !evidence.pages.some((page) => normalizedUrl(page.url) === normalizedUrl(venue.contact.sourceUrl))
+          ? emailSource({ ...venue, websiteUrl }, evidence)?.url
           : undefined;
       return {
         ...venue,
@@ -420,19 +451,8 @@ export async function runResearchWorkflow(
     strongVenues.length >= 2
       ? ResearchPlanSchema.parse({ ...reviewedPlan, venues: strongVenues })
       : null;
-  let plan = reviewedPlan;
-  let verification = verifyResearchPlan(reviewedPlan, evidence, expectedRequirements);
-  if (strongPlan) {
-    const strongVerification = verifyResearchPlan(
-      strongPlan,
-      evidence,
-      expectedRequirements,
-    );
-    if (strongVerification.every((check) => check.passed)) {
-      plan = strongPlan;
-      verification = strongVerification;
-    }
-  }
+  const plan = strongPlan ?? reviewedPlan;
+  const verification = verifyResearchPlan(plan, evidence, expectedRequirements);
   const failedChecks = verification.filter((check) => !check.passed);
 
   if (!critique.approved || failedChecks.length > 0) {

@@ -1,6 +1,5 @@
 // Exposes the event creation and lookup contract used by the Gatherly frontend.
 import { ConvexError, v } from "convex/values";
-import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { eventFields } from "./schema";
 
@@ -78,12 +77,11 @@ export const create = mutation({
       title,
       requestKey,
       status: "researching",
-      isDemo: true,
+      isDemo: false,
       activities: initialActivities,
       researchStage: "queued",
       sendToken,
     });
-    await ctx.scheduler.runAfter(0, internal.research.generateForEvent, { eventId });
     return { eventId, sendToken };
   },
 });
@@ -103,8 +101,10 @@ export const get = query({
     if (!normalizedId) return null;
     const event = await ctx.db.get(normalizedId);
     if (!event) return null;
-    const publicEvent = { ...event };
-    delete publicEvent.sendToken;
+    // The creation key can recover the send token through an idempotent retry.
+    const { requestKey: _requestKey, sendToken: _sendToken, ...publicEvent } = event;
+    void _requestKey;
+    void _sendToken;
     return publicEvent;
   },
 });

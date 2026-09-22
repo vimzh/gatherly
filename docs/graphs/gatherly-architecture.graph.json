@@ -1,0 +1,226 @@
+{
+  "title": "Gatherly's evidence and outreach boundary",
+  "subtitle": "Convex coordinates live research, persists only reviewed results, and guards the one external side effect",
+  "description": "System architecture showing the browser and Convex event state, the Firecrawl and OpenAI research pipeline, deterministic verification, realtime results, and capability-protected AgentMail delivery.",
+  "footer": "Evidence may be incomplete. Unsupported claims do not pass the gate.",
+  "zones": [
+    {
+      "id": "entry",
+      "label": "1 · LIVE EVENT STATE",
+      "tone": "blue",
+      "width": 0.95
+    },
+    {
+      "id": "research",
+      "label": "2 · EVIDENCE PIPELINE",
+      "tone": "violet",
+      "width": 1.55
+    },
+    {
+      "id": "delivery",
+      "label": "3 · CONTROLLED SIDE EFFECT",
+      "tone": "green",
+      "width": 1.28
+    }
+  ],
+  "nodes": [
+    {
+      "id": "browser",
+      "zone": "entry",
+      "title": "Browser starts one event",
+      "body": [
+        "Next.js calls a Convex mutation",
+        "the URL carries event ID + send token"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 1,
+      "span": 2,
+      "evidence": [
+        "src/components/gatherly/event-brief-form.tsx",
+        "src/lib/event-navigation.ts",
+        "convex/events.ts"
+      ]
+    },
+    {
+      "id": "state",
+      "zone": "entry",
+      "title": "Convex keeps durable event state",
+      "body": [
+        "brief · stages · venues · drafts",
+        "queries stream changes to the workspace"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 2,
+      "span": 2,
+      "evidence": [
+        "convex/schema.ts",
+        "convex/events.ts",
+        "convex/researchData.ts",
+        "src/components/gatherly/event-page-client.tsx"
+      ]
+    },
+    {
+      "id": "scheduled",
+      "zone": "research",
+      "title": "A scheduled action owns the run",
+      "body": [
+        "ordered stage handoffs",
+        "failures become visible event state"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 1,
+      "span": 2,
+      "evidence": [
+        "convex/events.ts",
+        "convex/research.ts",
+        "convex/researchData.ts"
+      ]
+    },
+    {
+      "id": "providers",
+      "zone": "research",
+      "title": "Firecrawl feeds structured OpenAI passes",
+      "body": [
+        "discover + enrich public evidence",
+        "plan + research + independent critique"
+      ],
+      "note": "Crawled text is treated as untrusted input",
+      "status": "external",
+      "size": "wide",
+      "row": 2,
+      "span": 2,
+      "evidence": [
+        "convex/convex.config.ts",
+        "convex/research.ts",
+        "convex/lib/firecrawlEvidence.ts"
+      ]
+    },
+    {
+      "id": "verified",
+      "zone": "research",
+      "title": "The gate writes reviewed results",
+      "body": [
+        "14 deterministic checks must pass",
+        "venues + drafts persist together"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 3,
+      "span": 2,
+      "evidence": [
+        "convex/lib/researchWorkflow.ts",
+        "convex/researchData.ts",
+        "convex/schema.ts"
+      ]
+    },
+    {
+      "id": "live",
+      "zone": "delivery",
+      "title": "Reviewed cards appear live",
+      "body": [
+        "ranked evidence + visible unknowns",
+        "draft status updates without polling"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 1,
+      "span": 2,
+      "evidence": [
+        "convex/researchData.ts",
+        "src/components/gatherly/event-page-client.tsx",
+        "src/components/gatherly/event-workspace.tsx"
+      ]
+    },
+    {
+      "id": "guard",
+      "zone": "delivery",
+      "title": "A capability token guards send",
+      "body": [
+        "event + draft + venue must align",
+        "state changes to sending before HTTP"
+      ],
+      "status": "implemented",
+      "size": "wide",
+      "row": 2,
+      "span": 2,
+      "evidence": [
+        "src/components/gatherly/event-workspace.tsx",
+        "convex/outreachData.ts"
+      ]
+    },
+    {
+      "id": "agentmail",
+      "zone": "delivery",
+      "title": "AgentMail sends once",
+      "body": [
+        "message + thread IDs return to Convex",
+        "failed attempts remain observable"
+      ],
+      "note": "Retries reuse one key; stale attempts stop for review",
+      "status": "external",
+      "size": "wide",
+      "row": 3,
+      "span": 2,
+      "evidence": [
+        "convex/outreach.ts",
+        "convex/outreachData.ts",
+        "convex/outreach.test.ts"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "browser",
+      "to": "state",
+      "tone": "blue",
+      "route": "vertical"
+    },
+    {
+      "from": "state",
+      "to": "scheduled",
+      "tone": "violet",
+      "route": "orthogonal"
+    },
+    {
+      "from": "scheduled",
+      "to": "providers",
+      "tone": "violet",
+      "route": "vertical"
+    },
+    {
+      "from": "providers",
+      "to": "verified",
+      "tone": "violet",
+      "route": "vertical"
+    },
+    {
+      "from": "verified",
+      "to": "live",
+      "tone": "green",
+      "route": "orthogonal"
+    },
+    {
+      "from": "live",
+      "to": "guard",
+      "tone": "amber",
+      "route": "vertical"
+    },
+    {
+      "from": "guard",
+      "to": "agentmail",
+      "tone": "green",
+      "route": "vertical"
+    },
+    {
+      "from": "agentmail",
+      "to": "state",
+      "label": "delivery state",
+      "tone": "teal",
+      "route": "feedback",
+      "label_position": "middle"
+    }
+  ]
+}

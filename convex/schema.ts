@@ -62,7 +62,6 @@ const venueReview = v.object({
 export const eventFields = {
   brief: v.string(),
   title: v.string(),
-  requestKey: v.string(),
   status: eventStatus,
   isDemo: v.boolean(),
   activities: v.array(activity),
@@ -75,6 +74,7 @@ export const eventFields = {
     ),
   ),
   researchError: v.optional(v.string()),
+  researchAttemptId: v.optional(v.string()),
   researchQuery: v.optional(v.string()),
   agentStage: v.optional(agentStage),
   agentTrace: v.optional(v.array(agentStage)),
@@ -205,6 +205,7 @@ export const researchPlan = v.object({
 export default defineSchema({
   events: defineTable({
     ...eventFields,
+    requestKey: v.string(),
     sendToken: v.optional(v.string()),
   }).index("by_request_key", ["requestKey"]),
   venues: defineTable(venueFields).index("by_event", ["eventId"]),
