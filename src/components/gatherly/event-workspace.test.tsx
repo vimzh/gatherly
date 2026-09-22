@@ -1,6 +1,8 @@
-// Verifies the durable workspace and recovery copy without a browser runtime.
+// @vitest-environment jsdom
+// Verifies the durable workspace, rejected candidates, and recovery copy.
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { EventRecovery } from "./event-page-client";
 import { EventWorkspace } from "./event-workspace";
@@ -35,12 +37,14 @@ const event = {
   ],
 } as Doc<"events">;
 
+afterEach(cleanup);
+
 describe("event workspace", () => {
   it("shows honest activity, empty results, and the approval boundary", () => {
     const html = renderToStaticMarkup(
       <EventWorkspace
         event={event}
-        research={{ venues: [], drafts: [] }}
+        research={{ venues: [], drafts: [], rejectedCandidates: [] }}
         sendToken={null}
       />,
     );
@@ -49,6 +53,35 @@ describe("event workspace", () => {
     expect(html).toContain("Searching venue sources");
     expect(html).toContain("Researching venues");
     expect(html).toContain("AgentMail sends only after your confirmation.");
+  });
+
+  it("reveals rejected candidates without offering outreach", () => {
+    const rejectedCandidate = {
+      _id: "rejected-venue-id",
+      _creationTime: 1,
+      eventId: event._id,
+      name: "Venue 180",
+      location: "London",
+      sourceUrl: "https://venue-180.example.com",
+      capacityMaximum: 180,
+      reason: "Published maximum capacity is below the requested 200 attendees.",
+    } as Doc<"rejectedVenues">;
+
+    render(
+      <EventWorkspace
+        event={event}
+        research={{ venues: [], drafts: [], rejectedCandidates: [rejectedCandidate] }}
+        sendToken={null}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "View rejected candidates (1)" }),
+    );
+
+    expect(screen.getByText("Venue 180")).toBeTruthy();
+    expect(screen.getByText("Capacity: 180")).toBeTruthy();
+    expect(screen.queryByText("Send with AgentMail")).toBeNull();
   });
 
   it("offers a new search when an event link cannot be resolved", () => {

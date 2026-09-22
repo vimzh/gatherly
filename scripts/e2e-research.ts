@@ -167,6 +167,7 @@ for (const [index, scenario] of selectedScenarios.entries()) {
     });
     const venues = research?.venues ?? [];
     const drafts = research?.drafts ?? [];
+    const rejectedCandidates = research?.rejectedCandidates ?? [];
     const verification = event.aiReview?.verification ?? [];
     const checks = {
       completed: event.status === "review_ready",
@@ -213,6 +214,12 @@ for (const [index, scenario] of selectedScenarios.entries()) {
         ),
       draftsUnsent:
         drafts.length === venues.length && drafts.every((draft) => draft.status === "draft"),
+      rejectedCandidates: rejectedCandidates.every(
+        (candidate) =>
+          candidate.sourceUrl.startsWith("https://") &&
+          candidate.reason.trim().length > 0 &&
+          (candidate.capacityMaximum === null || candidate.capacityMaximum > 0),
+      ),
     };
     const failed = Object.entries(checks)
       .filter(([, passed]) => !passed)
@@ -221,6 +228,7 @@ for (const [index, scenario] of selectedScenarios.entries()) {
     console.log(
       `  research: ${event.status}; ${venues.length} venues; model ${event.aiReview?.model ?? "none"}`,
     );
+    console.log(`  rejected candidates: ${rejectedCandidates.length}`);
     console.log(`  discovery search: ${event.researchQuery ?? "not recorded"}`);
     console.log(
       `  critic: ${event.aiReview?.summary ?? event.researchError ?? "no summary"}; ${event.aiReview?.issues.length ?? 0} issue(s)`,

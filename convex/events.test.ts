@@ -172,6 +172,15 @@ describe("events", () => {
           },
         })),
       },
+      rejectedCandidates: [
+        {
+          name: "Venue 180",
+          location: "London",
+          sourceUrl: "https://venue-180.example.com",
+          capacityMaximum: 180,
+          reason: "Published maximum capacity is below the requested 300 attendees.",
+        },
+      ],
       reviewSummary: "The revised shortlist passed review.",
       issues: [],
       verification: [
@@ -187,6 +196,13 @@ describe("events", () => {
     expect(research?.venues[0].reviews?.[0].rating).toBe(4.2);
     expect(research?.drafts).toHaveLength(2);
     expect(research?.drafts.every((draft) => draft.status === "draft")).toBe(true);
+    expect(research?.rejectedCandidates).toMatchObject([
+      {
+        name: "Venue 180",
+        capacityMaximum: 180,
+        reason: "Published maximum capacity is below the requested 300 attendees.",
+      },
+    ]);
 
     const draftId = research!.drafts[0]._id;
     const otherEvent = await t.mutation(api.events.create, {

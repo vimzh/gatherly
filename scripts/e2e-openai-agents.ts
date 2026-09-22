@@ -136,7 +136,8 @@ for (const [index, [label, location, attendeeCount, brief]] of scenarios.entries
     }
 
     const evidence = makeEvidence(label, location, attendeeCount);
-    const candidates = await discoverCandidates(client, brief, searchPlan, evidence);
+    const discovery = await discoverCandidates(client, brief, searchPlan, evidence);
+    const candidates = discovery.candidates;
     const result = await runResearchWorkflow(
       brief,
       evidence,
@@ -173,7 +174,9 @@ for (const [index, [label, location, attendeeCount, brief]] of scenarios.entries
     console.log(
       `  planner: ${searchPlan.location} | ${searchPlan.attendeeCount} | ${searchPlan.eventType}`,
     );
-    console.log(`  scout: ${candidates.length} candidates`);
+    console.log(
+      `  scout: ${candidates.length} candidates; ${discovery.rejectedCandidates.length} rejected`,
+    );
     console.log(
       `  result: ${result.plan.venues.length} venues | top score ${top.recommendationScore}/100 | verifier 14/14 | outreach draft-only`,
     );

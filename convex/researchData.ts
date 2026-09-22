@@ -8,6 +8,8 @@ import {
   agentStage,
   criticismIssue,
   outreachDraftFields,
+  rejectedCandidate,
+  rejectedVenueFields,
   researchPlan,
   verificationCheck,
   venueFields,
@@ -205,6 +207,7 @@ export const complete = internalMutation({
     eventId: v.id("events"),
     model: v.string(),
     plan: researchPlan,
+    rejectedCandidates: v.array(rejectedCandidate),
     reviewSummary: v.string(),
     issues: v.array(criticismIssue),
     verification: v.array(verificationCheck),
@@ -249,6 +252,13 @@ export const complete = internalMutation({
         subject: venue.outreach.subject,
         body: venue.outreach.body,
         status: "draft",
+      });
+    }
+
+    for (const candidate of args.rejectedCandidates.slice(0, 10)) {
+      await ctx.db.insert("rejectedVenues", {
+        eventId: args.eventId,
+        ...candidate,
       });
     }
 
@@ -331,12 +341,19 @@ export const getByEvent = query({
           ...outreachDraftFields,
         }),
       ),
+      rejectedCandidates: v.array(
+        v.object({
+          _id: v.id("rejectedVenues"),
+          _creationTime: v.number(),
+          ...rejectedVenueFields,
+        }),
+      ),
     }),
     v.null(),
   ),
   handler: async (ctx, { eventId }) => {
     if (!(await ctx.db.get(eventId))) return null;
-    const [venues, drafts] = await Promise.all([
+    const [venues, drafts, rejectedCandidates] = await Promise.all([
       ctx.db
         .query("venues")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
@@ -345,7 +362,11 @@ export const getByEvent = query({
         .query("outreachDrafts")
         .withIndex("by_event", (q) => q.eq("eventId", eventId))
         .take(5),
+      ctx.db
+        .query("rejectedVenues")
+        .withIndex("by_event", (q) => q.eq("eventId", eventId))
+        .take(10),
     ]);
-    return { venues, drafts };
+    return { venues, drafts, rejectedCandidates };
   },
 });

@@ -103,9 +103,10 @@ function makePlan(
   };
 }
 
-function makeEvidence(): FirecrawlEvidence {
+function makeEvidence(count = 2): FirecrawlEvidence {
+  const venueNumbers = Array.from({ length: count }, (_, index) => index + 1);
   return {
-    pages: [1, 2].flatMap((number) => [
+    pages: venueNumbers.flatMap((number) => [
       {
         purpose: "venue" as const,
         title: `Venue ${number}`,
@@ -133,7 +134,7 @@ function makeEvidence(): FirecrawlEvidence {
         images: [],
       },
     ]),
-    images: [1, 2].map((number) => ({
+    images: venueNumbers.map((number) => ({
       url: `https://images.example.com/${number}.jpg`,
       sourceUrl: `https://venue-${number}.example.com`,
       title: `Venue ${number}`,
@@ -191,9 +192,9 @@ describe("research workflow scenarios", () => {
     expect(buildVenueDiscoveryQuery("London", 300, "hackathon")).toBe(
       '"London" hackathon venue 300 attendees capacity official contact email',
     );
-    expect(buildBroadVenueDiscoveryQuery("London", 300)).toContain(
-      "event venue event space venue hire",
-    );
+    const broadQuery = buildBroadVenueDiscoveryQuery("London");
+    expect(broadQuery).toContain("event venue event space venue hire");
+    expect(broadQuery).not.toContain("300");
 
     const enrichmentQuery = buildVenueEnrichmentQuery(
       "Example Hall",
@@ -252,6 +253,46 @@ describe("research workflow scenarios", () => {
       true,
     );
     expect(result.plan.venues.map((venue) => venue.recommendationScore)).toEqual([85, 80]);
+  });
+
+  it("moves a weak candidate out when the remaining shortlist still verifies", async () => {
+    const draft = makePlan(scenarios[0]);
+    const weakVenue = structuredClone(draft.venues[1]);
+    weakVenue.name = "London hackathon Venue 3";
+    weakVenue.websiteUrl = "https://venue-3.example.com";
+    weakVenue.recommendationScore = 20;
+    weakVenue.capacity.sourceUrl = "https://venue-3.example.com/capacity";
+    weakVenue.contact.value = "events@venue-3.example.com";
+    weakVenue.contact.sourceUrl = "https://venue-3.example.com/contact";
+    weakVenue.evidence[0].sourceUrl = "https://venue-3.example.com/events";
+    weakVenue.images[0].url = "https://images.example.com/3.jpg";
+    weakVenue.images[0].sourceUrl = "https://venue-3.example.com";
+    weakVenue.reviews[0].sourceUrl = "https://reviews.example.com/venue-3";
+    draft.venues.push(weakVenue);
+    const result = await runResearchWorkflow(
+      scenarios[0][0],
+      makeEvidence(3),
+      {
+        research: async () => draft,
+        critique: async () => ({
+          approved: true,
+          summary: "Two strong candidates remain after review.",
+          issues: [
+            {
+              severity: "warning",
+              venueName: draft.venues[2].name,
+              field: "fit",
+              message: "The evidence does not support the event requirements.",
+            },
+          ],
+          revisedPlan: draft,
+        }),
+      },
+    );
+
+    expect(result.draft.venues).toHaveLength(3);
+    expect(result.plan.venues.map((venue) => venue.recommendationScore)).toEqual([85, 80]);
+    expect(result.verification.every((check) => check.passed)).toBe(true);
   });
 
   it("stops when the independent critic does not approve the revision", async () => {

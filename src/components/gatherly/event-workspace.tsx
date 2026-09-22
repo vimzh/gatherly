@@ -31,6 +31,7 @@ type ResearchResult =
   | {
       venues: Doc<"venues">[];
       drafts: Doc<"outreachDrafts">[];
+      rejectedCandidates: Doc<"rejectedVenues">[];
     }
   | null
   | undefined;
@@ -141,6 +142,67 @@ function DraftSendButton({
   );
 }
 
+function RejectedCandidates({
+  candidates,
+}: {
+  candidates: Doc<"rejectedVenues">[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (candidates.length === 0) return null;
+
+  return (
+    <section className="mb-3 border-t border-border pt-3">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full justify-between"
+        aria-controls="rejected-candidates"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+      >
+        {expanded ? "Hide" : "View"} rejected candidates ({candidates.length})
+      </Button>
+      {expanded ? (
+        <div id="rejected-candidates" className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+          <p className="text-xs leading-5 text-muted-foreground">
+            Excluded by automated fit checks, but still available for your review.
+          </p>
+          {candidates.map((candidate) => (
+            <article key={candidate._id} className="rounded border border-border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold">{candidate.name}</h3>
+                  <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                    <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                    {candidate.location}
+                  </p>
+                </div>
+                <a
+                  href={candidate.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open source for ${candidate.name}`}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="size-4" aria-hidden="true" />
+                </a>
+              </div>
+              <p className="mt-3 text-xs">
+                Capacity: {candidate.capacityMaximum ?? "Not published"}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                {candidate.reason}
+              </p>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function EventWorkspace({
   event,
   research,
@@ -155,6 +217,7 @@ export function EventWorkspace({
   ).length;
   const venues = research?.venues ?? [];
   const drafts = research?.drafts ?? [];
+  const rejectedCandidates = research?.rejectedCandidates ?? [];
 
   return (
     <main className="min-h-svh p-3 sm:p-5">
@@ -456,6 +519,8 @@ export function EventWorkspace({
               </p>
             </div>
           )}
+
+          <RejectedCandidates candidates={rejectedCandidates} />
 
           <div className="rounded border border-border bg-secondary p-3.5">
             <p className="flex items-center gap-2 text-xs font-medium">

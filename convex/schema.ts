@@ -122,6 +122,23 @@ export const venueFields = {
   reviews: v.optional(v.array(venueReview)),
 };
 
+export const rejectedCandidate = v.object({
+  name: v.string(),
+  location: v.string(),
+  sourceUrl: v.string(),
+  capacityMaximum: v.union(v.number(), v.null()),
+  reason: v.string(),
+});
+
+export const rejectedVenueFields = {
+  eventId: v.id("events"),
+  name: v.string(),
+  location: v.string(),
+  sourceUrl: v.string(),
+  capacityMaximum: v.union(v.number(), v.null()),
+  reason: v.string(),
+};
+
 export const outreachDraftFields = {
   eventId: v.id("events"),
   venueId: v.id("venues"),
@@ -191,6 +208,7 @@ export default defineSchema({
     sendToken: v.optional(v.string()),
   }).index("by_request_key", ["requestKey"]),
   venues: defineTable(venueFields).index("by_event", ["eventId"]),
+  rejectedVenues: defineTable(rejectedVenueFields).index("by_event", ["eventId"]),
   outreachDrafts: defineTable(outreachDraftFields)
     .index("by_event", ["eventId"])
     .index("by_venue", ["venueId"]),

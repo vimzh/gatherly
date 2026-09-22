@@ -120,14 +120,10 @@ export function buildVenueDiscoveryQuery(
     .slice(0, 500);
 }
 
-export function buildBroadVenueDiscoveryQuery(
-  location: string,
-  attendeeCount: number | null,
-) {
+export function buildBroadVenueDiscoveryQuery(location: string) {
   return [
     `"${location.trim().slice(0, 160)}"`,
     "event venue event space venue hire",
-    attendeeCount ? `${attendeeCount} guests capacity` : "",
     "official hire contact",
   ]
     .filter(Boolean)

@@ -401,7 +401,7 @@ export async function runResearchWorkflow(
     );
   const seenNames = new Set<string>();
   const seenWebsites = new Set<string>();
-  const plan = ResearchPlanSchema.parse({
+  const reviewedPlan = ResearchPlanSchema.parse({
     ...critique.revisedPlan,
     requirements: draft.requirements,
     venues: normalizedVenues.filter((venue) => {
@@ -413,7 +413,26 @@ export async function runResearchWorkflow(
       return true;
     }),
   });
-  const verification = verifyResearchPlan(plan, evidence, expectedRequirements);
+  const strongVenues = reviewedPlan.venues.filter(
+    (venue) => venue.recommendationScore >= 50,
+  );
+  const strongPlan =
+    strongVenues.length >= 2
+      ? ResearchPlanSchema.parse({ ...reviewedPlan, venues: strongVenues })
+      : null;
+  let plan = reviewedPlan;
+  let verification = verifyResearchPlan(reviewedPlan, evidence, expectedRequirements);
+  if (strongPlan) {
+    const strongVerification = verifyResearchPlan(
+      strongPlan,
+      evidence,
+      expectedRequirements,
+    );
+    if (strongVerification.every((check) => check.passed)) {
+      plan = strongPlan;
+      verification = strongVerification;
+    }
+  }
   const failedChecks = verification.filter((check) => !check.passed);
 
   if (!critique.approved || failedChecks.length > 0) {
@@ -426,5 +445,5 @@ export async function runResearchWorkflow(
     );
   }
 
-  return { plan, critique, verification };
+  return { draft, plan, critique, verification };
 }
