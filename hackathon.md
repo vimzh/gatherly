@@ -3,16 +3,16 @@
 - **Project:** Gatherly
 - **Event:** Convex All Gas Hackathon
 - **What it does:** Crawls public venue, image, review, and contact evidence from an event brief, verifies a shortlist, and sends organizer-confirmed outreach through AgentMail.
-- **Live app:** not deployed
+- **Live app:** https://limitless-spaniel-248.convex.app
 - **Repo:** private
 - **Frontend:** Convex static hosting
-- **Convex deployment:** not deployed
+- **Convex deployment:** https://limitless-spaniel-248.eu-west-1.convex.cloud
 - **Components:** @firecrawl/firecrawl-convex
 - **Convex features:** schema, tables, indexes, queries, mutations, actions, scheduled functions, realtime queries
 - **Auth:** none
 - **AI models:** gpt-5.4-mini-2026-03-17
 - **Started:** 2026-09-21T17:53:21Z
-- **Last updated:** 2026-09-22T09:23:03Z
+- **Last updated:** 2026-09-22T10:38:44Z
 
 ## Log
 
@@ -74,3 +74,10 @@ the message, created a thread, and stored it as sent. The approval token,
 provider-failure recovery, persisted sent state, and duplicate-send prevention
 paths also pass their eleven focused tests (`convex/outreach.test.ts`,
 `convex/events.test.ts`).
+
+### 2026-09-22 - f0c49fe
+Created persistent cloud development and production deployments, copied the
+required integration configuration without exposing values, and deployed the
+Convex schema, functions, indexes, and Firecrawl component to production.
+Published the static Next.js export through Convex hosting and verified both the
+landing page and event route return HTTP 200 (`next.config.ts`, `package.json`).
