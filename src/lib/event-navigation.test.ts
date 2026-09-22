@@ -17,6 +17,8 @@ describe("event navigation", () => {
   });
 
   it("encodes the Convex identifier into the static event route", () => {
-    expect(eventHref("event/id+1")).toBe("/event?id=event%2Fid%2B1");
+    expect(eventHref("event/id+1", "send/token+1")).toBe(
+      "/event?id=event%2Fid%2B1&token=send%2Ftoken%2B1",
+    );
   });
 });

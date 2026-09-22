@@ -8,6 +8,6 @@ export function normalizeEventBrief(value: string) {
   return brief;
 }
 
-export function eventHref(eventId: string) {
-  return `/event?id=${encodeURIComponent(eventId)}`;
+export function eventHref(eventId: string, sendToken: string) {
+  return `/event?id=${encodeURIComponent(eventId)}&token=${encodeURIComponent(sendToken)}`;
 }

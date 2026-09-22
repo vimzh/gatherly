@@ -1,5 +1,6 @@
 // Exposes the event creation and lookup contract used by the Gatherly frontend.
 import { ConvexError, v } from "convex/values";
+import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { eventFields } from "./schema";
 
@@ -13,13 +14,13 @@ const initialActivities = [
   {
     key: "search",
     label: "Searching venue sources",
-    description: "Demo activity — live venue research is not connected yet.",
-    state: "active" as const,
+    description: "Firecrawl venue, image, and review research is queued.",
+    state: "queued" as const,
   },
   {
     key: "capacity",
     label: "Checking capacity and requirements",
-    description: "Queued until venue sources are available.",
+    description: "Queued until public venue evidence is collected.",
     state: "queued" as const,
   },
   {
@@ -30,33 +31,37 @@ const initialActivities = [
   },
   {
     key: "shortlist",
-    label: "Building the shortlist",
-    description: "Queued until venue evidence is collected.",
+    label: "Critiquing and verifying the shortlist",
+    description: "Queued until the first research pass is complete.",
     state: "queued" as const,
   },
   {
     key: "outreach",
     label: "Drafting outreach",
-    description: "No email will be sent without organizer approval.",
+    description: "AgentMail drafts are prepared for organizer review.",
     state: "queued" as const,
   },
   {
     key: "approval",
     label: "Waiting for organizer approval",
-    description: "Every outbound draft remains paused until you approve it.",
+    description: "Nothing sends until the organizer confirms a specific draft.",
     state: "queued" as const,
   },
 ];
 
 export const create = mutation({
   args: { brief: v.string(), requestKey: v.string() },
-  returns: v.id("events"),
+  returns: v.object({ eventId: v.id("events"), sendToken: v.string() }),
   handler: async (ctx, { brief: rawBrief, requestKey }) => {
     const existing = await ctx.db
       .query("events")
       .withIndex("by_request_key", (q) => q.eq("requestKey", requestKey))
       .unique();
-    if (existing) return existing._id;
+    if (existing) {
+      const sendToken = existing.sendToken ?? crypto.randomUUID();
+      if (!existing.sendToken) await ctx.db.patch(existing._id, { sendToken });
+      return { eventId: existing._id, sendToken };
+    }
 
     const brief = rawBrief.trim();
     if (!brief) {
@@ -67,14 +72,19 @@ export const create = mutation({
     }
 
     const title = brief.length > 64 ? `${brief.slice(0, 61).trimEnd()}…` : brief;
-    return ctx.db.insert("events", {
+    const sendToken = crypto.randomUUID();
+    const eventId = await ctx.db.insert("events", {
       brief,
       title,
       requestKey,
       status: "researching",
       isDemo: true,
       activities: initialActivities,
+      researchStage: "queued",
+      sendToken,
     });
+    await ctx.scheduler.runAfter(0, internal.research.generateForEvent, { eventId });
+    return { eventId, sendToken };
   },
 });
 
@@ -90,6 +100,11 @@ export const get = query({
   ),
   handler: async (ctx, { eventId }) => {
     const normalizedId = ctx.db.normalizeId("events", eventId);
-    return normalizedId ? ctx.db.get(normalizedId) : null;
+    if (!normalizedId) return null;
+    const event = await ctx.db.get(normalizedId);
+    if (!event) return null;
+    const publicEvent = { ...event };
+    delete publicEvent.sendToken;
+    return publicEvent;
   },
 });

@@ -51,7 +51,12 @@ export function EventWorkspaceLoading() {
 export function EventPageClient() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("id")?.trim() || null;
+  const sendToken = searchParams.get("token")?.trim() || null;
   const event = useQuery(api.events.get, eventId ? { eventId } : "skip");
+  const research = useQuery(
+    api.researchData.getByEvent,
+    event ? { eventId: event._id } : "skip",
+  );
 
   if (!eventId) {
     return (
@@ -71,5 +76,5 @@ export function EventPageClient() {
     );
   }
 
-  return <EventWorkspace event={event} />;
+  return <EventWorkspace event={event} research={research} sendToken={sendToken} />;
 }

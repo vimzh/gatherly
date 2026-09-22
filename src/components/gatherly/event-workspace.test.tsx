@@ -37,12 +37,18 @@ const event = {
 
 describe("event workspace", () => {
   it("shows honest activity, empty results, and the approval boundary", () => {
-    const html = renderToStaticMarkup(<EventWorkspace event={event} />);
+    const html = renderToStaticMarkup(
+      <EventWorkspace
+        event={event}
+        research={{ venues: [], drafts: [] }}
+        sendToken={null}
+      />,
+    );
 
-    expect(html).toContain("Demo activity");
+    expect(html).toContain("AI research in progress");
     expect(html).toContain("Searching venue sources");
-    expect(html).toContain("No venues yet");
-    expect(html).toContain("Nothing sends without your approval.");
+    expect(html).toContain("Researching venues");
+    expect(html).toContain("AgentMail sends only after your confirmation.");
   });
 
   it("offers a new search when an event link cannot be resolved", () => {

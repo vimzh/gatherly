@@ -38,9 +38,15 @@ describe("event brief form", () => {
     expect(mocks.createEvent).not.toHaveBeenCalled();
   });
 
-  it("warns that unauthenticated event briefs are demo data", () => {
+  it("fills the composer from a detailed example card", () => {
     render(<EventBriefForm />);
 
-    expect(screen.getByText("Demo mode — use example event details only.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Creative showcase/i }));
+
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe(
+      "A creative showcase for 180 guests in Berlin with a stage and late-evening access",
+    );
+    expect(screen.getByText("180 guests")).toBeTruthy();
+    expect(screen.getByText("Stage · Late-evening access")).toBeTruthy();
   });
 });

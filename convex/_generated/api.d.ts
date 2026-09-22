@@ -9,6 +9,12 @@
  */
 
 import type * as events from "../events.js";
+import type * as lib_firecrawlEvidence from "../lib/firecrawlEvidence.js";
+import type * as lib_researchWorkflow from "../lib/researchWorkflow.js";
+import type * as outreach from "../outreach.js";
+import type * as outreachData from "../outreachData.js";
+import type * as research from "../research.js";
+import type * as researchData from "../researchData.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +24,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   events: typeof events;
+  "lib/firecrawlEvidence": typeof lib_firecrawlEvidence;
+  "lib/researchWorkflow": typeof lib_researchWorkflow;
+  outreach: typeof outreach;
+  outreachData: typeof outreachData;
+  research: typeof research;
+  researchData: typeof researchData;
 }>;
 
 /**
@@ -46,4 +58,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  firecrawl: import("@firecrawl/firecrawl-convex/_generated/component.js").ComponentApi<"firecrawl">;
+};

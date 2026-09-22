@@ -2,7 +2,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { ArrowUpRight, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
@@ -11,9 +11,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { eventHref, normalizeEventBrief } from "@/lib/event-navigation";
 
 const EXAMPLES = [
-  "A 300-person hackathon in London with overnight access and strong Wi-Fi",
-  "A creative showcase for 180 guests with a stage and late-evening access",
-  "A company gathering for 120 people near central London with catering",
+  {
+    type: "Hackathon",
+    location: "London",
+    attendance: "300 guests",
+    requirements: "Overnight access · Strong Wi-Fi",
+    prompt: "A 300-person hackathon in London with overnight access and strong Wi-Fi",
+  },
+  {
+    type: "Creative showcase",
+    location: "Berlin",
+    attendance: "180 guests",
+    requirements: "Stage · Late-evening access",
+    prompt: "A creative showcase for 180 guests in Berlin with a stage and late-evening access",
+  },
+  {
+    type: "Company gathering",
+    location: "Central London",
+    attendance: "120 guests",
+    requirements: "Catering · Breakout space",
+    prompt: "A company gathering for 120 people near central London with catering and breakout space",
+  },
 ];
 
 export function EventBriefForm() {
@@ -48,11 +66,11 @@ export function EventBriefForm() {
       setPending(true);
       setError(null);
       requestKeyRef.current ??= crypto.randomUUID();
-      const eventId = await createEvent({
+      const created = await createEvent({
         brief: normalized,
         requestKey: requestKeyRef.current,
       });
-      router.push(eventHref(eventId));
+      router.push(eventHref(created.eventId, created.sendToken));
     } catch (caughtError) {
       briefRef.current?.focus();
       setError(
@@ -85,7 +103,7 @@ export function EventBriefForm() {
           aria-describedby={error ? "event-brief-error" : "event-brief-help"}
           className="min-h-36 resize-none border-0 bg-transparent px-3 py-3 text-base leading-7 shadow-none focus-visible:border-transparent focus-visible:ring-0 md:text-base"
         />
-        <div className="flex items-end justify-between gap-3 border-t border-border px-2 pt-3">
+        <div className="flex items-end justify-between gap-3 px-2 pt-3">
           <p id="event-brief-help" className="hidden text-xs text-muted-foreground sm:block">
             Include location, guest count, dates, and must-haves.
           </p>
@@ -111,25 +129,29 @@ export function EventBriefForm() {
         </p>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap justify-center gap-2" aria-label="Example event briefs">
-        {EXAMPLES.map((example, index) => (
+      <div className="mt-6 grid grid-cols-3 gap-2" aria-label="Example event briefs">
+        {EXAMPLES.map((example) => (
           <button
-            key={example}
+            key={example.type}
             type="button"
-            onClick={() => updateBrief(example)}
-            className="rounded-sm border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-input hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            onClick={() => updateBrief(example.prompt)}
+            aria-pressed={brief === example.prompt}
+            className="group flex min-h-40 min-w-0 flex-col rounded border border-border bg-card p-3 text-left transition-colors hover:border-input hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:border-foreground/40 aria-pressed:bg-secondary/60 sm:p-4"
           >
-            {index === 0 ? "Hackathon" : index === 1 ? "Creative showcase" : "Company gathering"}
+            <span className="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              {example.type}
+            </span>
+            <span className="mt-4 text-sm font-semibold tracking-[-0.015em]">
+              {example.location}
+            </span>
+            <span className="mt-1 text-xs text-muted-foreground">
+              {example.attendance}
+            </span>
+            <span className="mt-auto border-t border-border pt-3 text-[0.68rem] leading-4 text-muted-foreground group-hover:text-foreground sm:text-xs sm:leading-5">
+              {example.requirements}
+            </span>
           </button>
         ))}
-      </div>
-
-      <div className="mt-6 space-y-1.5 text-xs text-muted-foreground">
-        <p className="flex items-center justify-center gap-2">
-          <ShieldCheck className="size-3.5 text-clay" aria-hidden="true" />
-          You approve every email before it sends.
-        </p>
-        <p>Demo mode — use example event details only.</p>
       </div>
     </div>
   );

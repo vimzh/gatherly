@@ -1,4 +1,7 @@
-// Presents one persisted event as a responsive sourcing workspace.
+// Presents live venue research and organizer-confirmed AgentMail outreach.
+"use client";
+
+import { useAction } from "convex/react";
 import {
   Building2,
   Check,
@@ -8,16 +11,29 @@ import {
   Mail,
   MailCheck,
   MessageSquareText,
+  ExternalLink,
+  MapPin,
   Search,
   ShieldCheck,
+  Star,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import { useState } from "react";
+import { api } from "../../../convex/_generated/api";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Activity = Doc<"events">["activities"][number];
+type ResearchResult =
+  | {
+      venues: Doc<"venues">[];
+      drafts: Doc<"outreachDrafts">[];
+    }
+  | null
+  | undefined;
 
 const workspaceLinks = [
   { label: "Activity", icon: Clock3, active: true },
@@ -53,10 +69,92 @@ function ActivityIcon({ state }: { state: Activity["state"] }) {
   return <Circle className="size-4" aria-hidden="true" />;
 }
 
-export function EventWorkspace({ event }: { event: Doc<"events"> }) {
+function DraftSendButton({
+  eventId,
+  draft,
+  venueName,
+  recipient,
+  sendToken,
+}: {
+  eventId: Id<"events">;
+  draft: Doc<"outreachDrafts">;
+  venueName: string;
+  recipient: string | null;
+  sendToken: string | null;
+}) {
+  const sendDraft = useAction(api.outreach.sendDraft);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (draft.status === "sent") {
+    return <span className="text-xs font-medium">Sent via AgentMail</span>;
+  }
+  if (!recipient) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        A public email address is required for AgentMail.
+      </span>
+    );
+  }
+  if (!sendToken) {
+    return (
+      <span className="text-xs text-destructive">
+        Open the original private event link to send.
+      </span>
+    );
+  }
+  const authorizedToken = sendToken;
+
+  async function send() {
+    if (!window.confirm(`Send this email to ${recipient} for ${venueName}?`)) return;
+    setPending(true);
+    setError(null);
+    try {
+      await sendDraft({ eventId, draftId: draft._id, sendToken: authorizedToken });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "AgentMail could not send this draft.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div>
+      <Button
+        type="button"
+        size="sm"
+        disabled={pending || draft.status === "sending"}
+        onClick={send}
+      >
+        {pending || draft.status === "sending"
+          ? "Sending"
+          : draft.status === "failed"
+            ? "Retry with AgentMail"
+            : "Send with AgentMail"}
+      </Button>
+      {error ? (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function EventWorkspace({
+  event,
+  research,
+  sendToken,
+}: {
+  event: Doc<"events">;
+  research: ResearchResult;
+  sendToken: string | null;
+}) {
   const completedCount = event.activities.filter(
     (activity) => activity.state === "completed",
   ).length;
+  const venues = research?.venues ?? [];
+  const drafts = research?.drafts ?? [];
 
   return (
     <main className="min-h-svh p-3 sm:p-5">
@@ -117,7 +215,9 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
             <div>
               <Badge variant="outline" className="gap-1.5 font-medium text-muted-foreground">
                 <span className="size-1.5 rounded-full bg-clay" aria-hidden="true" />
-                Demo activity
+                {event.researchStage === "review_ready"
+                  ? "AI research reviewed"
+                  : "AI research in progress"}
               </Badge>
               <h2 id="activity-title" className="mt-4 text-2xl font-semibold tracking-[-0.035em]">
                 Sourcing your venue
@@ -175,23 +275,192 @@ export function EventWorkspace({ event }: { event: Doc<"events"> }) {
             <h2 id="venues-title" className="text-sm font-semibold">
               Venue results
             </h2>
-            <span className="text-xs text-muted-foreground">0 found</span>
+            <span className="text-xs text-muted-foreground">{venues.length} found</span>
           </div>
 
-          <div className="flex flex-1 flex-col items-center justify-center py-14 text-center lg:py-8">
-            <span className="flex size-11 items-center justify-center rounded bg-secondary text-muted-foreground">
-              <Search className="size-5" aria-hidden="true" />
-            </span>
-            <h3 className="mt-4 text-sm font-semibold">No venues yet</h3>
-            <p className="mt-2 max-w-60 text-xs leading-5 text-muted-foreground">
-              Live venue research will replace this demo activity once Firecrawl is connected.
-            </p>
-          </div>
+          {venues.length > 0 ? (
+            <div className="flex-1 space-y-3 overflow-y-auto py-4">
+              {venues.map((venue, index) => {
+                const draft = drafts.find((item) => item.venueId === venue._id);
+                const image = venue.images?.[0];
+                return (
+                  <article key={venue._id} className="overflow-hidden rounded border border-border">
+                    {image ? (
+                      <a href={image.sourceUrl} target="_blank" rel="noreferrer">
+                        {/* Firecrawl returns arbitrary HTTPS image hosts, so Next Image cannot safely predeclare them. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={image.url}
+                          alt={image.alt}
+                          className="aspect-[16/9] w-full border-b border-border object-cover"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </a>
+                    ) : (
+                      <p className="border-b border-border bg-secondary px-3.5 py-3 text-xs text-muted-foreground">
+                        No sourced image found.
+                      </p>
+                    )}
+                    <div className="p-3.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold">{venue.name}</h3>
+                          <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                            <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                            {venue.address ?? venue.location}
+                          </p>
+                        </div>
+                        <a
+                          href={venue.websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Open ${venue.name} website`}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="size-4" aria-hidden="true" />
+                        </a>
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                        {venue.fitSummary}
+                      </p>
+                      {venue.recommendationScore !== undefined ? (
+                        <div className="mt-3 rounded border border-border bg-secondary p-2.5">
+                          <Badge variant="outline" className="text-[0.68rem]">
+                            {index === 0 ? "Recommended" : "Fit score"} ·{" "}
+                            {venue.recommendationScore}/100
+                          </Badge>
+                          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                            {venue.recommendationReason}
+                          </p>
+                        </div>
+                      ) : null}
+                      <p className="mt-2 text-xs">
+                        Capacity: {venue.capacityMaximum ?? "Needs confirmation"}
+                      </p>
+                      <p className="mt-2 text-xs">
+                        Public contact:{" "}
+                        {venue.contactType === "contact_form" ? (
+                          <a
+                            href={venue.contactValue}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline underline-offset-4"
+                          >
+                            Contact form
+                          </a>
+                        ) : (
+                          venue.contactValue
+                        )}
+                      </p>
+                      {venue.reviews?.slice(0, 2).map((review) => (
+                        <div
+                          key={review.sourceUrl}
+                          className="mt-3 rounded border border-border bg-secondary p-2.5"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="flex items-center gap-1 font-medium">
+                              <Star className="size-3" aria-hidden="true" />
+                              {review.rating === null
+                                ? "Public reviews"
+                                : `${review.rating}/5`}
+                              {review.reviewCount === null
+                                ? ""
+                                : ` · ${review.reviewCount} reviews`}
+                            </span>
+                            <a
+                              href={review.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline underline-offset-4"
+                            >
+                              {review.sourceName}
+                            </a>
+                          </div>
+                          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                            {review.summary}
+                          </p>
+                        </div>
+                      ))}
+                      {!venue.reviews?.length ? (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Independent reviews: not found in public sources.
+                        </p>
+                      ) : null}
+                      {venue.amenities?.length ? (
+                        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Amenities">
+                          {venue.amenities.slice(0, 6).map((amenity) => (
+                            <li
+                              key={amenity}
+                              className="rounded border border-border px-1.5 py-1 text-[0.68rem]"
+                            >
+                              {amenity}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Amenities: not found in public sources.
+                        </p>
+                      )}
+                      <p className="mt-3 text-xs leading-5">
+                        <span className="font-medium">Accessibility:</span>{" "}
+                        <span className="text-muted-foreground">
+                          {venue.accessibilityNotes ?? "Not found in public sources."}
+                        </span>
+                      </p>
+                      <p className="mt-2 text-xs leading-5">
+                        <span className="font-medium">Pricing:</span>{" "}
+                        <span className="text-muted-foreground">
+                          {venue.pricingNotes ?? "Not published; confirm with the venue."}
+                        </span>
+                      </p>
+                      <a
+                        href={venue.evidence[0]?.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs underline underline-offset-4"
+                      >
+                        View source <ExternalLink className="size-3" aria-hidden="true" />
+                      </a>
+                      {draft ? (
+                        <div className="mt-4 border-t border-border pt-3">
+                          <p className="mb-2 text-xs font-medium">{draft.subject}</p>
+                          <DraftSendButton
+                            eventId={event._id}
+                            draft={draft}
+                            venueName={venue.name}
+                            recipient={
+                              venue.contactType === "email" ? venue.contactValue : null
+                            }
+                            sendToken={sendToken}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center py-14 text-center lg:py-8">
+              <span className="flex size-11 items-center justify-center rounded bg-secondary text-muted-foreground">
+                <Search className="size-5" aria-hidden="true" />
+              </span>
+              <h3 className="mt-4 text-sm font-semibold">
+                {event.researchStage === "failed" ? "Research needs attention" : "Researching venues"}
+              </h3>
+              <p className="mt-2 max-w-60 text-xs leading-5 text-muted-foreground">
+                {event.researchError ??
+                  "Firecrawl is gathering venue evidence before OpenAI and the verifier review the shortlist."}
+              </p>
+            </div>
+          )}
 
           <div className="rounded border border-border bg-secondary p-3.5">
             <p className="flex items-center gap-2 text-xs font-medium">
               <ShieldCheck className="size-4 text-clay" aria-hidden="true" />
-              Nothing sends without your approval.
+              AgentMail sends only after your confirmation.
             </p>
           </div>
         </aside>
