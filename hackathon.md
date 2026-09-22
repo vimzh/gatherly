@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** gpt-5.4-mini-2026-03-17
 - **Started:** 2026-09-21T17:53:21Z
-- **Last updated:** 2026-09-22T10:38:44Z
+- **Last updated:** 2026-09-22T11:16:27Z
 
 ## Log
 
@@ -81,3 +81,20 @@ required integration configuration without exposing values, and deployed the
 Convex schema, functions, indexes, and Firecrawl component to production.
 Published the static Next.js export through Convex hosting and verified both the
 landing page and event route return HTTP 200 (`next.config.ts`, `package.json`).
+
+### 2026-09-22 - 58727eb
+Added a view-only rejected-candidate audit trail without adding another
+Firecrawl request. Discovery now preserves grounded alternatives from the
+existing evidence bundle, including known below-capacity venues, and the final
+workflow moves sub-50 candidates out only when the remaining shortlist still
+passes all 14 deterministic checks (`convex/research.ts`,
+`convex/lib/researchWorkflow.ts`). Rejected options persist in a new indexed
+`rejectedVenues` table with their source, known capacity, and reason; they never
+receive an outreach draft (`convex/schema.ts`, `convex/researchData.ts`). The
+workspace exposes them behind a collapsed “View rejected candidates” control
+with no send action (`src/components/gatherly/event-workspace.tsx`). Thirty-seven
+tests, lint, type checking, and the production build pass. The production
+backend and static site were redeployed, and both live routes return HTTP 200.
+No outreach was sent. A final provider-backed rerun could not start because the
+Firecrawl account returned `402 Insufficient credits`; earlier London runs in
+this iteration completed the full pipeline with all 14 checks passing.
