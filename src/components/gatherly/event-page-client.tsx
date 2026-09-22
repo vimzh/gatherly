@@ -38,11 +38,23 @@ export function EventRecovery({
 
 export function EventWorkspaceLoading() {
   return (
-    <main className="min-h-svh p-3 sm:p-5">
-      <div className="mx-auto grid min-h-[calc(100svh-1.5rem)] max-w-[90rem] gap-3 lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)_22rem]">
-        <Skeleton className="min-h-48 rounded" />
-        <Skeleton className="min-h-96 rounded" />
-        <Skeleton className="min-h-64 rounded" />
+    <main className="min-h-svh px-4 py-5 sm:px-6 sm:py-7">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <Skeleton className="h-5 w-20 rounded" />
+          <Skeleton className="h-4 w-28 rounded" />
+        </div>
+        <div className="border-b border-border py-12">
+          <Skeleton className="h-6 w-44 rounded" />
+          <Skeleton className="mt-5 h-12 max-w-2xl rounded" />
+          <Skeleton className="mt-4 h-5 max-w-xl rounded" />
+          <Skeleton className="mt-8 h-1 w-full rounded-full" />
+        </div>
+        <div className="grid gap-px overflow-hidden rounded border border-border bg-border py-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton key={index} className="h-48 rounded-none" />
+          ))}
+        </div>
       </div>
     </main>
   );
@@ -74,6 +86,9 @@ export function EventPageClient() {
         description="This event may have been removed, or the link may be incorrect."
       />
     );
+  }
+  if (event.researchStage === "review_ready" && research === undefined) {
+    return <EventWorkspaceLoading />;
   }
 
   return <EventWorkspace event={event} research={research} sendToken={sendToken} />;

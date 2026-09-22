@@ -15,6 +15,9 @@ const event = {
   requestKey: "request-key",
   status: "researching",
   isDemo: true,
+  researchStage: "running",
+  agentStage: "discovering",
+  agentTrace: ["planning", "discovering"],
   activities: [
     {
       key: "brief",
@@ -40,7 +43,7 @@ const event = {
 afterEach(cleanup);
 
 describe("event workspace", () => {
-  it("shows honest activity, empty results, and the approval boundary", () => {
+  it("shows the current agent, completed handoffs, and live actions", () => {
     const html = renderToStaticMarkup(
       <EventWorkspace
         event={event}
@@ -49,9 +52,12 @@ describe("event workspace", () => {
       />,
     );
 
-    expect(html).toContain("AI research in progress");
+    expect(html).toContain("Gatherly is sourcing your venue.");
+    expect(html).toContain("Agent handoffs");
+    expect(html).toContain("Scout");
+    expect(html).toContain("Step 2 of 6");
+    expect(html).toContain("Planner");
     expect(html).toContain("Searching venue sources");
-    expect(html).toContain("Researching venues");
     expect(html).toContain("AgentMail sends only after your confirmation.");
   });
 
@@ -66,10 +72,16 @@ describe("event workspace", () => {
       capacityMaximum: 180,
       reason: "Published maximum capacity is below the requested 200 attendees.",
     } as Doc<"rejectedVenues">;
+    const reviewReadyEvent = {
+      ...event,
+      status: "review_ready",
+      researchStage: "review_ready",
+      agentStage: undefined,
+    } as Doc<"events">;
 
     render(
       <EventWorkspace
-        event={event}
+        event={reviewReadyEvent}
         research={{ venues: [], drafts: [], rejectedCandidates: [rejectedCandidate] }}
         sendToken={null}
       />,
@@ -82,6 +94,26 @@ describe("event workspace", () => {
     expect(screen.getByText("Venue 180")).toBeTruthy();
     expect(screen.getByText("Capacity: 180")).toBeTruthy();
     expect(screen.queryByText("Send with AgentMail")).toBeNull();
+  });
+
+  it("shows a useful provider failure without an internal stack trace", () => {
+    const failedEvent = {
+      ...event,
+      status: "failed",
+      researchStage: "failed",
+      researchError:
+        'Uncaught ConvexError: {"message":"Firecrawl search failed: Insufficient credits."} at fail (node_modules/provider.ts:38:4)',
+    } as Doc<"events">;
+    const html = renderToStaticMarkup(
+      <EventWorkspace
+        event={failedEvent}
+        research={{ venues: [], drafts: [], rejectedCandidates: [] }}
+        sendToken={null}
+      />,
+    );
+
+    expect(html).toContain("Firecrawl search failed: Insufficient credits.");
+    expect(html).not.toContain("node_modules");
   });
 
   it("offers a new search when an event link cannot be resolved", () => {

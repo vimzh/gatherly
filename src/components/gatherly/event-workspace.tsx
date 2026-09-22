@@ -25,6 +25,7 @@ import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ResearchProgress } from "./research-progress";
 
 type Activity = Doc<"events">["activities"][number];
 type ResearchResult =
@@ -212,6 +213,10 @@ export function EventWorkspace({
   research: ResearchResult;
   sendToken: string | null;
 }) {
+  if (event.researchStage !== "review_ready") {
+    return <ResearchProgress event={event} />;
+  }
+
   const completedCount = event.activities.filter(
     (activity) => activity.state === "completed",
   ).length;
@@ -510,12 +515,9 @@ export function EventWorkspace({
               <span className="flex size-11 items-center justify-center rounded bg-secondary text-muted-foreground">
                 <Search className="size-5" aria-hidden="true" />
               </span>
-              <h3 className="mt-4 text-sm font-semibold">
-                {event.researchStage === "failed" ? "Research needs attention" : "Researching venues"}
-              </h3>
+              <h3 className="mt-4 text-sm font-semibold">No verified venues found</h3>
               <p className="mt-2 max-w-60 text-xs leading-5 text-muted-foreground">
-                {event.researchError ??
-                  "Firecrawl is gathering venue evidence before OpenAI and the verifier review the shortlist."}
+                The review finished without a venue that met the evidence checks.
               </p>
             </div>
           )}
