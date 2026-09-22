@@ -128,14 +128,6 @@ Live Firecrawl and OpenAI evaluation scripts are also available as
 `bun run test:e2e` and `bun run test:openai`; the scripts read provider
 credentials from the local process environment and may incur usage costs.
 
-## Prototype boundaries
-
-Gatherly currently completes research, shortlist verification, draft creation,
-and the first organizer-confirmed outbound email. It does not yet authenticate
-users, ingest AgentMail replies, manage follow-up conversations, or complete a
-booking, contract, payment, or site visit. Events are publicly readable in this
-prototype, so organizers should not enter confidential details.
-
 ## What's next
 
 - Add authentication and per-event authorization before accepting real user or

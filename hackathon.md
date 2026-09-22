@@ -4,7 +4,7 @@
 - **Event:** Convex All Gas Hackathon
 - **What it does:** Crawls public venue, image, review, and contact evidence from an event brief, verifies a shortlist, and sends organizer-confirmed outreach through AgentMail.
 - **Live app:** https://limitless-spaniel-248.convex.app
-- **Repo:** private
+- **Repo:** https://github.com/vimzh/gatherly
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://limitless-spaniel-248.eu-west-1.convex.cloud
 - **Components:** none
@@ -12,7 +12,7 @@
 - **Auth:** none
 - **AI models:** gpt-5.4-mini-2026-03-17
 - **Started:** 2026-09-21T17:53:21Z
-- **Last updated:** 2026-09-22T15:41:19Z
+- **Last updated:** 2026-09-22T17:27:19Z
 
 ## Log
 
@@ -112,7 +112,7 @@ an internal stack trace. Thirty-eight tests, lint, type checking, the production
 build, and a local visual browser check pass. The production site was
 republished and both live routes return HTTP 200. No outreach was sent.
 
-### 2026-09-22 - working tree
+### 2026-09-22 - eac0065
 Initially deployed a 90-second, one-retry OpenAI limit to development and
 production with 39 passing tests. Subsequent QA replaced it with one shared
 eight-minute deadline across OpenAI and Firecrawl waits, disabled OpenAI
@@ -177,3 +177,14 @@ agent activity and outreach drafts, while the Bengaluru inbox remains clearly
 simulated. All 86 tests, type checking, lint, the production build, and direct
 browser checks of both hosted paths pass. The site was republished without a
 provider call or outreach send.
+Added an editable subject and message preview before explicit send confirmation.
+The backend validates and persists the approved text, rejects empty edits, and
+locks editing after the first send attempt so retries reuse the same payload
+and idempotency key (`src/components/gatherly/event-workspace.tsx`,
+`convex/outreachData.ts`, `convex/outreach.test.ts`). Added the project pitch
+(`pitch.md`). The final pre-push check passed all 90 tests, type checking, lint,
+and the production build; a subsequent log audit reran all 90 tests successfully.
+Published the repository and pushed the code, tests, pitch, and README diagrams
+in commit `eac0065`; local HEAD and the remote main branch matched after the push.
+The oversized demo video remains local pending an upload choice. No new live
+provider verification or deployment was performed for the push or log audit.
